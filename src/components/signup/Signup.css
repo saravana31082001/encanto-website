@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+.signup-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #EAF1FB;
+  padding: 1rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.signup-form {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid #e0e0e0;
+}
+
+.signup-title {
+  text-align: center;
+  margin-bottom: 1rem !important;
+  color: #333;
+  font-weight: 600 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 1.5rem !important;
+}
+
+.form-content {
+  width: 100%;
+}
+
+.submit-btn {
+  background-color: #1D68F5 !important;
+  color: white !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  border-radius: 8px !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.submit-btn:hover {
+  background-color: #1557d4 !important;
+}
+
+.login-link {
+  text-align: center;
+  margin: 0 !important;
+  color: #666 !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.login-link-anchor {
+  color: #1D68F5 !important;
+  text-decoration: none;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+}
+
+.login-link-anchor:hover {
+  text-decoration: underline;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .signup-form {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+  
+  .signup-title {
+    font-size: 0.875rem !important;
+  }
+}

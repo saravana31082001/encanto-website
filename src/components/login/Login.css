@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #EAF1FB;
+  padding: 1rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.login-form {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid #e0e0e0;
+}
+
+.login-title {
+  text-align: center;
+  margin-bottom: 1rem !important;
+  color: #333;
+  font-weight: 600 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 1.5rem !important;
+}
+
+.form-content {
+  width: 100%;
+}
+
+.submit-btn {
+  background-color: #1D68F5 !important;
+  color: white !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  border-radius: 8px !important;
+  font-family: 'Inter', sans-serif !important;
+  height: 42px !important;
+}
+
+.submit-btn:hover {
+  background-color: #1557d4 !important;
+}
+
+.signup-link {
+  text-align: center;
+  margin: 0 !important;
+  color: #666 !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.signup-link-anchor {
+  color: #1D68F5 !important;
+  text-decoration: none;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+}
+
+.signup-link-anchor:hover {
+  text-decoration: underline;
+}
+
+/* Placeholder text styling */
+.MuiOutlinedInput-input::placeholder {
+  color: #999 !important;
+  opacity: 1 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.95rem !important;
+}
+
+.MuiOutlinedInput-input:focus::placeholder {
+  opacity: 0 !important;
+}
+
+/* Ensure placeholder is hidden when focused */
+.MuiTextField-root .MuiOutlinedInput-input {
+  font-family: 'Inter', sans-serif !important;
+}
+
+.MuiTextField-root .MuiOutlinedInput-input:focus::placeholder {
+  opacity: 0 !important;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .login-form {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+  
+  .login-title {
+    font-size: 0.875rem !important;
+  }
+}
