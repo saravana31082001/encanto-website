@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { TextField, Button, Box, Typography, Paper, Alert } from '@mui/material';
 import { hashPassword } from '../../utils/sessionUtils';
 import EncantoLogo from '../../assets/SVG/EncantoLogo.svg';
+import AzureLogo from '../../assets/SVG/AzureLogo.svg';
 import { useApiService } from '../../services/apiService'; // 🚀 Import professional API service
 import { useApp } from '../../context/AppContext'; // 🎯 Import context for authentication state
 import './Login.css';
@@ -169,7 +170,7 @@ const Login = () => {
             variant="contained" 
             className="submit-btn"
             disabled={loading} // Disable button while loading
-            sx={{ mb: 2, height: '42px', fontFamily: 'Inter, sans-serif' }}
+            sx={{ height: '42px', fontFamily: 'Inter, sans-serif' }}
           >
             {loading ? 'Logging in...' : 'Login'}
           </Button>
@@ -180,6 +181,24 @@ const Login = () => {
               Sign up here
             </Link>
           </Typography>
+          
+          {/* Powered By Section */}
+          <Box className="powered-by-section">
+            <Box className="powered-by-line-container">
+              <Box className="powered-by-line-left"></Box>
+              <Typography variant="body2" className="powered-by-text">
+                Powered by
+              </Typography>
+              <Box className="powered-by-line-right"></Box>
+            </Box>
+            <Box className="azure-logo-container">
+              <img 
+                src={AzureLogo} 
+                alt="Azure Logo" 
+                className="azure-logo"
+              />
+            </Box>
+          </Box>
         </Box>
       </Paper>
     </Box>

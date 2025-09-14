@@ -41,6 +41,7 @@
   border-radius: 8px !important;
   font-family: 'Inter', sans-serif !important;
   height: 42px !important;
+  margin-bottom: 1rem !important;
 }
 
 .submit-btn:hover {
@@ -49,7 +50,7 @@
 
 .signup-link {
   text-align: center;
-  margin: 0 !important;
+  margin: 0rem 0 !important;
   color: #666 !important;
   font-family: 'Inter', sans-serif !important;
 }
@@ -63,6 +64,56 @@
 
 .signup-link-anchor:hover {
   text-decoration: underline;
+}
+
+/* Powered By Section */
+.powered-by-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1rem 0 -0.5rem 0;
+  padding: 0;
+}
+
+.powered-by-line-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+.powered-by-line-left,
+.powered-by-line-right {
+  flex: 1;
+  height: 1px;
+  background-color: #d0d0d0;
+}
+
+.powered-by-text {
+  color: #666 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.75rem !important;
+  margin: 0 0.5rem !important;
+  white-space: nowrap;
+  background-color: white;
+  padding: 0 0.5rem;
+}
+
+.azure-logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.azure-logo {
+  height: 44px;
+  width: auto;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.azure-logo:hover {
+  opacity: 1;
 }
 
 /* Placeholder text styling */

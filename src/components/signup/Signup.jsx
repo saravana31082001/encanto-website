@@ -5,6 +5,7 @@ import { hashPassword } from '../../utils/sessionUtils';
 import { useApiService } from '../../services/apiService';
 import { useApp } from '../../context/AppContext';
 import EncantoLogo from '../../assets/SVG/EncantoLogo.svg';
+import AzureLogo from '../../assets/SVG/AzureLogo.svg';
 import './Signup.css';
 
 const Signup = () => {
@@ -177,7 +178,7 @@ const Signup = () => {
               variant="outlined" 
               margin="normal"
               sx={{ 
-                minWidth: 150,
+                minWidth: 115,
                 mb: 1,
                 '& .MuiOutlinedInput-root': {
                   height: '42px',
@@ -310,7 +311,7 @@ const Signup = () => {
             variant="contained" 
             className="submit-btn"
             disabled={loading}
-            sx={{ mb: 2, height: '42px', fontFamily: 'Inter, sans-serif' }}
+            sx={{ height: '42px', fontFamily: 'Inter, sans-serif' }}
           >
             {loading ? 'Creating Account...' : 'Sign Up'}
           </Button>
@@ -321,6 +322,24 @@ const Signup = () => {
               Login here
             </Link>
           </Typography>
+          
+          {/* Powered By Section */}
+          <Box className="powered-by-section">
+            <Box className="powered-by-line-container">
+              <Box className="powered-by-line-left"></Box>
+              <Typography variant="body2" className="powered-by-text">
+                Powered by
+              </Typography>
+              <Box className="powered-by-line-right"></Box>
+            </Box>
+            <Box className="azure-logo-container">
+              <img 
+                src={AzureLogo} 
+                alt="Azure Logo" 
+                className="azure-logo"
+              />
+            </Box>
+          </Box>
         </Box>
       </Paper>
     </Box>
