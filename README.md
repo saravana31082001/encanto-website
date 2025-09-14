@@ -300,6 +300,10 @@ If you encounter any issues or have questions:
 - Check network tab for API call performance
 - Use Lighthouse for performance auditing
 
+### Deployment Experience
+
+I deployed this project to Azure App Service using GitHub Actions. The process involved pushing the code to GitHub, creating an App Service with the Node.js runtime, and linking it through the Deployment Center. To serve the Vite build correctly, I added an Express server (server.js) that serves the dist/ folder and includes a catch-all route to handle React Router paths (e.g., /login). Locally, the app runs with npm run dev for development or npm run build && npm start to simulate production. This setup ensures the same build runs both locally and on Azure.
+
 ---
 
 **Note**: This is a frontend application that connects to a hosted .NET Web API backend. The backend handles all data persistence, authentication, and business logic.
