@@ -203,8 +203,15 @@ export const AppProvider = ({ children }) => {
   const logout = async () => {
     try {
       // Call the API logout endpoint
-      await auth.logout();
-      console.log('Successfully logged out from server');
+      const result = await auth.logout();
+      
+      if (result.success) {
+        if (result.warning) {
+          console.warn('Logout completed with warning:', result.warning);
+        } else {
+          console.log('Successfully logged out from server');
+        }
+      }
     } catch (error) {
       console.error('Error during logout API call:', error);
       // Continue with local logout even if API call fails

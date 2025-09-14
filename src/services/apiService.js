@@ -2,7 +2,7 @@
 // Professional API service for all HTTP requests
 
 const API_BASE_URL = 'https://encanto-webapi.azurewebsites.net';
-//const API_BASE_URL = 'https://localhost:44330';
+//const API_BASE_URL = 'https://localhost:7207';
 
 
 // 🔧 Core API request handler
@@ -212,18 +212,50 @@ async function logoutExistingUser(endpoint, method = 'POST', data = null)  {
 
     const response = await fetch(url, options);
 
+    // Handle different response status codes
     if (response.status === 200) {
       localStorage.removeItem('session-key'); // Clear local session
       console.log('User logged out successfully');
       return { success: true };
     } 
+    else if (response.status === 400) {
+      // Handle 400 Bad Request - this might still be a successful logout
+      // The session might be invalid/expired, but we should still clear local session
+      console.warn('Logout API returned 400 Bad Request - clearing local session anyway');
+      localStorage.removeItem('session-key'); // Clear local session
+      
+      // Try to get error details from response
+      let errorMessage = 'Bad Request';
+      try {
+        const errorText = await response.text();
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
+      
+      console.log('User logged out locally (API returned 400):', errorMessage);
+      return { success: true, warning: `API returned 400: ${errorMessage}` };
+    }
+    else if (response.status === 401 || response.status === 403) {
+      // Session is invalid/expired - clear local session and treat as successful logout
+      console.log('Session invalid/expired - clearing local session');
+      localStorage.removeItem('session-key');
+      return { success: true, warning: 'Session was already invalid' };
+    }
     else {
-      throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+      // For other errors, still clear local session but log the error
+      console.error(`Logout API error: ${response.status} - ${response.statusText}`);
+      localStorage.removeItem('session-key'); // Clear local session anyway
+      return { success: true, warning: `API error: ${response.status} - ${response.statusText}` };
     }
   }
   catch (error) {
     console.error('logoutExistingUser() API call failed:', error);
-    throw error;
+    // Even if the API call fails completely, clear the local session
+    localStorage.removeItem('session-key');
+    return { success: true, warning: `Network error: ${error.message}` };
   }
 }
 
