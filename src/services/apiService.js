@@ -141,10 +141,16 @@ async function loginExistingUser(endpoint, method = 'POST', data = null)  {
     else if (response.status === 400) {
       // Handle BadRequest from backend (invalid credentials, etc.)
       const errorMessage = await response.text();
-      throw new Error(errorMessage);
+      console.error('Login failed with 400 error:', errorMessage);
+      throw new Error(errorMessage || 'Invalid email or password. Please try again.');
+    }
+    else if (response.status === 401) {
+      // Handle Unauthorized
+      throw new Error('Invalid email or password. Please check your credentials and try again.');
     }
     else {
-      throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+      console.error('Login failed with status:', response.status, response.statusText);
+      throw new Error(`Login failed. Please try again later. (Error: ${response.status})`);
     }
 
   }
