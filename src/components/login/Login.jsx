@@ -72,8 +72,10 @@ const Login = () => {
       // Success! Navigate to dashboard
       navigate('/dashboard');
     } catch (error) {
-      // Show error message
-      setError(error.message);
+      // Show error message in the login component
+      console.error('Login error:', error);
+      const errorMessage = error.message || 'Login failed. Please check your credentials and try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
