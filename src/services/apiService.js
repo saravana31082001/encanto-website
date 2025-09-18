@@ -95,7 +95,17 @@ async function createNewAccount(endpoint, method = 'POST', data = null) {
       return { success: true, message: result };
     } 
     else {
-      throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+      // Try to extract the actual error message from the response body
+      let errorMessage = `API Error: ${response.status} - ${response.statusText}`;
+      try {
+        const errorText = await response.text();
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      } catch (e) {
+        console.warn('Could not read error response body:', e);
+      }
+      throw new Error(errorMessage);
     }
 
   }
