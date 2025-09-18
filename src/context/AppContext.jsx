@@ -164,6 +164,7 @@ export const AppProvider = ({ children }) => {
   // Login function
   const login = async (credentials) => {
     dispatch({ type: actionTypes.SET_LOADING, payload: true });
+    dispatch({ type: actionTypes.SET_ERROR, payload: null }); // Clear any previous errors
     
     try {
       // Use the unified auth.login function from apiService
@@ -194,7 +195,8 @@ export const AppProvider = ({ children }) => {
       dispatch({ type: actionTypes.SET_LOADING, payload: false });
       return response;
     } catch (error) {
-      dispatch({ type: actionTypes.SET_ERROR, payload: error.message });
+      dispatch({ type: actionTypes.SET_LOADING, payload: false });
+      // Don't set error in context state - let the component handle it
       throw error;
     }
   };
