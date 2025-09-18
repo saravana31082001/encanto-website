@@ -112,7 +112,7 @@ const Signup = () => {
       
     } catch (error) {
       console.error('Signup error:', error);
-      setError('An error occurred during signup. Please try again.');
+      setError(error.message || 'An error occurred during signup. Please try again.');
     } finally {
       setLoading(false);
     }

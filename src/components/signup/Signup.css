@@ -116,6 +116,23 @@
   opacity: 1;
 }
 
+/* Remove autofill blue background and text color */
+.MuiOutlinedInput-input:-webkit-autofill,
+.MuiOutlinedInput-input:-webkit-autofill:hover,
+.MuiOutlinedInput-input:-webkit-autofill:focus,
+.MuiOutlinedInput-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #333 !important;
+  background-color: white !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* For Firefox autofill */
+.MuiOutlinedInput-input:-moz-autofill {
+  background-color: white !important;
+  color: #333 !important;
+}
+
 /* Responsive design */
 @media (max-width: 480px) {
   .signup-form {
