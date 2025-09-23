@@ -5,7 +5,7 @@ const API_BASE_URL = 'https://encanto-webapi.azurewebsites.net';
 //const API_BASE_URL = 'https://localhost:44330';
 
 
-// 🔧 Core API request handler
+// 🔧 Core API request handlers
 async function makeApiCall(endpoint, method = 'GET', data = null) {
   try {
     const url = `${API_BASE_URL}${endpoint}`;
