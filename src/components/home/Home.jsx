@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import Dashboard from './dashboard/Dashboard';
-import BrowseEvents from './browse-events/BrowseEvents';
-import RegisteredEvents from './registered-events/RegisteredEvents';
-import EventHistory from './event-history/EventHistory';
-import NewEvent from './new-event/NewEvent';
-import MyEvents from './my-events/MyEvents';
-import ManageRequests from './manage-requests/ManageRequests';
-import Profile from '../profile/Profile';
+import LoadingSpinner from '../common/LoadingSpinner';
 import EncantoLogo from '../../assets/SVG/EncantoLogo.svg';
 import './Home.css';
+
+// Lazy load components for code splitting
+const Dashboard = lazy(() => import('./dashboard/Dashboard'));
+const BrowseEvents = lazy(() => import('./browse-events/BrowseEvents'));
+const RegisteredEvents = lazy(() => import('./registered-events/RegisteredEvents'));
+const EventHistory = lazy(() => import('./event-history/EventHistory'));
+const NewEvent = lazy(() => import('./new-event/NewEvent'));
+const MyEvents = lazy(() => import('./my-events/MyEvents'));
+const ManageRequests = lazy(() => import('./manage-requests/ManageRequests'));
+const Profile = lazy(() => import('../profile/Profile'));
 
 const Home = ({ activeSection }) => {
   const [activeComponent, setActiveComponent] = useState(activeSection || 'Dashboard');
@@ -101,26 +104,34 @@ const Home = ({ activeSection }) => {
   };
 
   const renderActiveComponent = () => {
-    switch (activeComponent) {
-      case 'Dashboard':
-        return <Dashboard />;
-      case 'BrowseEvents':
-        return <BrowseEvents />;
-      case 'RegisteredEvents':
-        return <RegisteredEvents />;
-      case 'EventHistory':
-        return <EventHistory />;
-      case 'NewEvent':
-        return <NewEvent />;
-      case 'MyEvents':
-        return <MyEvents />;
-      case 'ManageRequests':
-        return <ManageRequests />;
-      case 'Profile':
-        return <Profile />;
-      default:
-        return <Dashboard />;
-    }
+    const ComponentToRender = () => {
+      switch (activeComponent) {
+        case 'Dashboard':
+          return <Dashboard />;
+        case 'BrowseEvents':
+          return <BrowseEvents />;
+        case 'RegisteredEvents':
+          return <RegisteredEvents />;
+        case 'EventHistory':
+          return <EventHistory />;
+        case 'NewEvent':
+          return <NewEvent />;
+        case 'MyEvents':
+          return <MyEvents />;
+        case 'ManageRequests':
+          return <ManageRequests />;
+        case 'Profile':
+          return <Profile />;
+        default:
+          return <Dashboard />;
+      }
+    };
+
+    return (
+      <Suspense fallback={<LoadingSpinner message="Loading..." />}>
+        <ComponentToRender />
+      </Suspense>
+    );
   };
 
   return (
