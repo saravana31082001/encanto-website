@@ -1,11 +1,11 @@
 [
     {
       "EventId": "event_1757136093994_mrryahtx",
-      "Title": "Event 1",
-      "Description": "This is a sample description for event 1.",
+      "Title": "Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_Event 1_",
+      "Description": "Success is not an overnight achievement but the result of consistent effort, resilience, and the ability to learn from failure. Every great accomplishment begins with a vision, followed by determination and discipline to turn that vision into reality. Challenges often arise along the way, testing patience and perseverance, yet these obstacles play a crucial role in shaping strength and character. People who succeed are not necessarily the most talented or the most privileged, but they are those who refuse to quit when difficulties appear. Hard work, dedication, and adaptability become their greatest allies. Furthermore, success is not just about personal gain; it also involves the positive impact one creates in the lives of others. A true measure of success lies in the balance between achieving personal goals and contributing meaningfully to society. In this fast-paced world, where distractions are everywhere, focus becomes a powerful tool that separates dreamers from achievers. Consistent habits, time management, and self-discipline help build momentum toward long-term aspirations. Ultimately, success is not a destination but a continuous journey of growth, improvement, and purpose. Those who embrace the journey, while staying humble and grateful, discover that success is not just about reaching the top but enjoying the climb.",
       "OrganizerDetails": {
         "OrganizerId": "host_1757136093994_yunvnyss",
-        "OrganizerName": "Organizer 1",
+        "OrganizerName": "Organizer 1sdfsfsdfsdsdsff",
         "EventId": "event_1757136093994_mrryahtx",
         "Background": "#F8BBD0",
         "Foreground": "#E91E63"
@@ -18,7 +18,7 @@
       "Participants": [
         {
           "ParticipantId": "guest_1757136093994_cnzsdpxu",
-          "ParticipantName": "Participant_1_1",
+          "ParticipantName": "Participant_1_1sdfsdfsdfsdfsdf",
           "EventId": "event_1757136093994_mrryahtx",
           "RegisteredTimestamp": 1757136093994,
           "UpdatedTimestamp": 1757136093994,
@@ -177,7 +177,7 @@
       "Description": "This is a sample description for event 2.",
       "OrganizerDetails": {
         "OrganizerId": "host_1757136193994_faczqilz",
-        "OrganizerName": "Organizer 2",
+        "OrganizerName": "Or 2",
         "EventId": "event_1757136193994_qemyyqlq",
         "Background": "#D9D9D9",
         "Foreground": "#3A3B3F"

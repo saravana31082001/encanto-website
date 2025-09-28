@@ -4,7 +4,9 @@ import eventsJson from "../../../assets/JsonData/Events.json"; // ✅ direct imp
 
 const BrowseEvents = () => {
   const [search, setSearch] = useState("");
-  const [selectedEvent, setSelectedEvent] = useState(null); // For popup modal
+  const [popoverVisible, setPopoverVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
 
   // Ensure JSON is always an array
   const eventsData = Array.isArray(eventsJson) ? eventsJson : [eventsJson];
@@ -14,6 +16,23 @@ const BrowseEvents = () => {
     event.Title.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Handle popover toggle
+  const handleParticipantsClick = (event, eventElement) => {
+    const rect = eventElement.getBoundingClientRect();
+    setPopoverPosition({
+      top: rect.bottom + window.scrollY + 8, // 8px gap below the badge
+      left: rect.left + window.scrollX
+    });
+    setSelectedEvent(event);
+    setPopoverVisible(true);
+  };
+
+  // Close popover when clicking outside
+  const handleClosePopover = () => {
+    setPopoverVisible(false);
+    setSelectedEvent(null);
+  };
+
   // Format schedule (date + start–end time)
   const formatSchedule = (start, end) => {
     if (!start || !end) return { date: "", timeRange: "" };
@@ -21,8 +40,23 @@ const BrowseEvents = () => {
     const startDate = new Date(start);
     const endDate = new Date(end);
 
-    const date = startDate.toLocaleDateString(); // same line
-    const timeRange = `${startDate.toLocaleTimeString()} - ${endDate.toLocaleTimeString()}`; // next line
+    // Format date as "19 Sept, 2025"
+    const date = startDate.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+    
+    // Format time as "04:30 pm - 08:45 pm"
+    const timeRange = `${startDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })} - ${endDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })}`;
 
     return { date, timeRange };
   };
@@ -48,50 +82,59 @@ const BrowseEvents = () => {
             );
             return (
               <div key={event.EventId} className="event-card">
-                {/* Header row */}
-                <div className="event-header">
-                  <h4 className="event-title">{event.Title}</h4>
-                  <div className="organizer-header">
-                    <span
-                      className="organizer-logo"
-                      style={{
-                        backgroundColor:
-                          event.OrganizerDetails?.Background || "#eee",
-                        color: event.OrganizerDetails?.Foreground || "#111",
-                      }}
-                    >
-                      {event.OrganizerDetails?.OrganizerName
-                        ? event.OrganizerDetails.OrganizerName[0]
-                        : "?"}
-                    </span>
-                    <h3 className="organizer-name">
-                      {event.OrganizerDetails?.OrganizerName ||
-                        "Unknown Organizer"}
-                    </h3>
-                  </div>
-                </div>
-
-                {/* Middle row */}
-                <div className="event-body">
-                  <p className="event-description">{event.Description}</p>
-                  <div className="event-time">
-                    <h4>Schedule</h4>
-                    <p>{date}</p>
-                    <p>{timeRange}</p>
-                  </div>
-                </div>
-
-                {/* Footer row */}
-                <div className="event-footer">
-                  <button
-                    className="participants-btn"
-                    onClick={() => setSelectedEvent(event)}
+                {/* Left Section - Event Details */}
+                 <div className="event-left-section">
+                   <div className="event-header">
+                     <h2 className="event-title">{event.Title}</h2>
+                   </div>
+                   <p className="event-description">{event.Description}</p>
+                  <div 
+                    className={`participants-badge ${!event.IsPrivate ? 'clickable' : ''}`}
+                    onClick={!event.IsPrivate ? (e) => handleParticipantsClick(event, e.currentTarget) : undefined}
                   >
-                    Total Participants ({event.Participants?.length || 0})
-                  </button>
-
-                  <button className="register-btn">Apply</button>
+                    Total Participants : {event.Participants?.length || 0}
+                  </div>
                 </div>
+
+                 {/* Right Section - Organizer and Schedule */}
+                 <div className="event-right-section">
+                   <div className="organizer-info">
+                     <span
+                       className="organizer-avatar"
+                       style={{
+                         backgroundColor:
+                           event.OrganizerDetails?.Background || "#9c27b0",
+                         color: event.OrganizerDetails?.Foreground || "#fff",
+                       }}
+                     >
+                       {event.OrganizerDetails?.OrganizerName
+                         ? event.OrganizerDetails.OrganizerName[0]
+                         : "?"}
+                     </span>
+                     <span className="organizer-name">
+                       {event.OrganizerDetails?.OrganizerName && event.OrganizerDetails.OrganizerName.length > 12
+                         ? event.OrganizerDetails.OrganizerName.substring(0, 12) + ".."
+                         : event.OrganizerDetails?.OrganizerName || "Unknown Organizer"}
+                     </span>
+                   </div>
+                   
+                   <div className="schedule-info">
+                     <div className="schedule-label">Scheduled on:</div>
+                     <div className="schedule-date">{date}</div>
+                     <div className="schedule-time">{timeRange}</div>
+                   </div>
+                   
+                   {event.IsPrivate && (
+                     <div className="private-indicator">
+                       <span className="lock-icon">🔒</span>
+                       <span className="private-text">Private</span>
+                     </div>
+                   )}
+                   
+                   <button className="apply-button">
+                     {event.IsPrivate ? "Request" : "Join"}
+                   </button>
+                 </div>
               </div>
             );
           })
@@ -100,44 +143,50 @@ const BrowseEvents = () => {
         )}
       </div>
 
-      {/* Popup Modal */}
-      {selectedEvent && (
-        <div className="popup-overlay" onClick={() => setSelectedEvent(null)}>
-          <div className="popup-content" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              Participants - {selectedEvent.Title} (
-              {selectedEvent.Participants?.length || 0})
-            </h2>
-            <ul type="none">
-              {selectedEvent.Participants &&
-                [...selectedEvent.Participants]
-                  .sort((a, b) =>
-                    a.ParticipantName.localeCompare(b.ParticipantName)
-                  )
-                  .map((p) => (
-                    <li key={p.ParticipantId}>
-                      <span
-                        className="participant-logo"
-                        style={{
-                          backgroundColor: p.Background || "#ccc",
-                          color: p.Foreground || "#000",
-                        }}
-                      >
-                        {p.ParticipantName[0]}
-                      </span>
-                      {p.ParticipantName}
-                    </li>
-                  ))}
-            </ul>
-            <button
-              className="close-btn"
-              onClick={() => setSelectedEvent(null)}
-            >
-              Close
-            </button>
+      {/* Participants Popover */}
+      {popoverVisible && selectedEvent && (
+        <>
+          <div className="popover-overlay" onClick={handleClosePopover}></div>
+          <div 
+            className="popover-content tooltip-style" 
+            style={{
+              top: popoverPosition.top,
+              left: popoverPosition.left
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="popover-header">
+              <h3>Participants ({selectedEvent.Participants?.length || 0})</h3>
+              <button className="popover-close" onClick={handleClosePopover}>×</button>
+            </div>
+            <div className="participants-list">
+              {selectedEvent.Participants && selectedEvent.Participants.length > 0 ? (
+                selectedEvent.Participants.map((participant) => (
+                  <div key={participant.ParticipantId} className="participant-item">
+                    <span
+                      className="participant-avatar"
+                      style={{
+                        backgroundColor: participant.Background || "#9c27b0",
+                        color: participant.Foreground || "#fff",
+                      }}
+                    >
+                      {participant.ParticipantName ? participant.ParticipantName[0] : "?"}
+                    </span>
+                    <span className="participant-name">
+                      {participant.ParticipantName && participant.ParticipantName.length > 22 
+                        ? participant.ParticipantName.substring(0, 22) + ".."
+                        : participant.ParticipantName || "Unknown Participant"}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="no-participants">No participants registered</div>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
+
     </div>
   );
 };
