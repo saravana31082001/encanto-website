@@ -3,7 +3,7 @@
 //Comment for updation
 
 const API_BASE_URL = 'https://encanto-webapi.azurewebsites.net';
-//const API_BASE_URL = 'https://localhost:44330';
+//const API_BASE_URL = 'https://localhost:7207';
 
 
 // 🔧 Core API request handlers
@@ -207,6 +207,60 @@ async function getProfileDetails(endpoint, method = 'GET', data = null) {
 }
 
 
+// API call for creating new event
+async function createNewEvent(endpoint, method = 'POST', data = null) {
+  try {
+    const url = `${API_BASE_URL}${endpoint}`;
+    
+    const options = {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    };
+
+    // Add session key if user is authenticated
+    const sessionKey = localStorage.getItem('session-key');
+    if (sessionKey) {
+      options.headers['session-key'] = sessionKey;
+    }
+
+    // Add request body for the event data
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+
+    console.log('Making API call to:', url, 'with options:', options);
+
+    const response = await fetch(url, options);
+
+    if (response.status === 200) {
+      // Handle successful response from .NET backend
+      const result = await response.text(); // Get the string response
+      console.log('Event created successfully:', result);
+
+      return { success: true, message: result };
+    } 
+    else {
+      // Try to extract the actual error message from the response body
+      let errorMessage = `API Error: ${response.status} - ${response.statusText}`;
+      try {
+        const errorText = await response.text();
+        if (errorText) {
+          errorMessage = errorText;
+        }
+      } catch (e) {
+        console.warn('Could not read error response body:', e);
+      }
+      throw new Error(errorMessage);
+    }
+
+  }
+  catch (error) {
+    console.error('createNewEvent() API call failed:', error);
+    throw error;
+  }
+}
 
 // API call for logging out existing user
 async function logoutExistingUser(endpoint, method = 'POST', data = null)  {
@@ -343,6 +397,11 @@ export const events = {
     return await makeApiCall('/user/events');
   },
 
+  // Create a new event
+  async create(eventData) {
+    return await createNewEvent('/events/new', 'POST', eventData);
+  },
+
 };
 
 // 🔔 APPLICATION UTILITIES MODULE
@@ -371,6 +430,7 @@ export const useApiService = () => {
     getAllEvents: events.getAll,
     getEvent: events.getById,
     getUserEvents: events.getUserEvents,
+    createEvent: events.create,
 
     // Application utilities
     testDatabase: app.testDatabase,
