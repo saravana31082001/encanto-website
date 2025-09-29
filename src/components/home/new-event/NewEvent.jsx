@@ -19,9 +19,14 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
+import { useApiService } from '../../../services/apiService';
+import { useApp } from '../../../context/AppContext';
 import './NewEvent.css';
 
 const NewEvent = () => {
+  const { createEvent } = useApiService();
+  const { user } = useApp();
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -106,17 +111,34 @@ const NewEvent = () => {
       return;
     }
 
+    if (!user) {
+      setSubmitMessage('User information not available. Please refresh the page.');
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitMessage('');
 
     try {
-      // TODO: Implement API call to create event
-      console.log('Creating event with data:', formData);
+      // Map form data to .NET CreateEventRequest model
+      const eventData = {
+        Title: formData.title,
+        Description: formData.description,
+        OrganizerId: user.userId || user.id, // UserId of Host
+        SendLinkNotificationAt: getSendLinkNotificationValue(formData.sendLinkNotificationAt),
+        EnableRating: formData.enableRatings,
+        EnableComments: formData.enableComments,
+        StartTimestamp: formData.startDateTime.valueOf(), // Convert to milliseconds timestamp
+        EndTimestamp: formData.endDateTime.valueOf(), // Convert to milliseconds timestamp
+        CreatedTimestamp: Date.now(), // Current timestamp in milliseconds
+        IsPrivate: formData.isPrivate
+      };
+
+      // Call the API to create the event
+      const response = await createEvent(eventData);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setSubmitMessage('Event created successfully!');
+      console.log('Event created successfully:', response);
+      setSubmitMessage(response.message || 'Event created successfully!');
       
       // Reset form after successful submission
       setFormData({
@@ -132,9 +154,23 @@ const NewEvent = () => {
       
     } catch (error) {
       console.error('Error creating event:', error);
-      setSubmitMessage('Failed to create event. Please try again.');
+      setSubmitMessage(`Failed to create event: ${error.message}`);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Helper function to map dropdown selection to numeric value
+  const getSendLinkNotificationValue = (selection) => {
+    switch (selection) {
+      case 'participant-applies':
+        return 1;
+      case 'accepting-registrations-button':
+        return 2;
+      case 'manual-button':
+        return 3;
+      default:
+        return 1; // Default to participant applies
     }
   };
 
