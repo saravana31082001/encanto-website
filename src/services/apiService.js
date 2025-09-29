@@ -387,6 +387,11 @@ export const events = {
     return await makeApiCall('/events');
   },
 
+  // Get upcoming events for browsing
+  async getBrowseUpcoming() {
+    return await makeApiCall('/events/browse-upcoming');
+  },
+
   // Get specific event details
   async getById(eventId) {
     return await makeApiCall(`/events/${eventId}`);
@@ -428,6 +433,7 @@ export const useApiService = () => {
 
     // Event management methods
     getAllEvents: events.getAll,
+    getBrowseUpcomingEvents: events.getBrowseUpcoming,
     getEvent: events.getById,
     getUserEvents: events.getUserEvents,
     createEvent: events.create,

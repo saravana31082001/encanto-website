@@ -1,20 +1,54 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./BrowseEvents.css";
-import eventsJson from "../../../assets/JsonData/Events.json"; // ✅ direct import
+import { useApiService } from "../../../services/apiService";
 
 const BrowseEvents = () => {
   const [search, setSearch] = useState("");
   const [popoverVisible, setPopoverVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
+  const [eventsData, setEventsData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Ensure JSON is always an array
-  const eventsData = Array.isArray(eventsJson) ? eventsJson : [eventsJson];
+  const apiService = useApiService();
+
+  // Load events data from API on component mount
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const events = await apiService.getBrowseUpcomingEvents();
+        const eventsArray = Array.isArray(events) ? events : [events];
+        setEventsData(eventsArray);
+      } catch (err) {
+        console.error('Failed to load events:', err);
+        setError(err.message || 'Failed to load events');
+        setEventsData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadEvents();
+  }, []); // Empty dependency array to run only once on mount
 
   // Filter events by title
-  const filteredEvents = eventsData.filter((event) =>
-    event.Title.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredEvents = eventsData.length > 0 ? eventsData.filter((event) => {
+    if (!event) {
+      return false;
+    }
+    
+    // Try different possible property names for title
+    const title = event.Title || event.title || event.eventTitle || event.name || event.eventName;
+    
+    if (!title) {
+      return false;
+    }
+    
+    return title.toLowerCase().includes(search.toLowerCase());
+  }) : [];
 
   // Handle popover toggle
   const handleParticipantsClick = (event, eventElement) => {
@@ -61,6 +95,35 @@ const BrowseEvents = () => {
     return { date, timeRange };
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="browse-events-container">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading events...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="browse-events-container">
+        <div className="error-container">
+          <p className="error-message">Error: {error}</p>
+          <button 
+            className="retry-button" 
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="browse-events-container">
       {/* Search bar */}
@@ -74,25 +137,34 @@ const BrowseEvents = () => {
 
       {/* Events grid */}
       <div className="events-grid">
-        {filteredEvents.length > 0 ? (
+        {!loading && !error && filteredEvents.length > 0 ? (
           filteredEvents.map((event) => {
+            if (!event) {
+              return null;
+            }
+            
+            const eventId = event.EventId || event.eventId || event.id || event._id;
+            if (!eventId) {
+              return null;
+            }
+            
             const { date, timeRange } = formatSchedule(
-              event.StartTimestamp,
-              event.EndTimestamp
+              event.StartTimestamp || event.startTimestamp || event.startTime || event.start_time,
+              event.EndTimestamp || event.endTimestamp || event.endTime || event.end_time
             );
             return (
-              <div key={event.EventId} className="event-card">
+              <div key={eventId} className="event-card">
                 {/* Left Section - Event Details */}
                  <div className="event-left-section">
                    <div className="event-header">
-                     <h2 className="event-title">{event.Title}</h2>
+                     <h2 className="event-title">{event.Title || event.title || event.eventTitle || event.name || event.eventName || 'Untitled Event'}</h2>
                    </div>
-                   <p className="event-description">{event.Description}</p>
+                   <p className="event-description">{event.Description || event.description || event.eventDescription || 'No description available'}</p>
                   <div 
-                    className={`participants-badge ${!event.IsPrivate ? 'clickable' : ''}`}
-                    onClick={!event.IsPrivate ? (e) => handleParticipantsClick(event, e.currentTarget) : undefined}
+                    className={`participants-badge ${!(event.IsPrivate || event.isPrivate || event.private) ? 'clickable' : ''}`}
+                    onClick={!(event.IsPrivate || event.isPrivate || event.private) ? (e) => handleParticipantsClick(event, e.currentTarget) : undefined}
                   >
-                    Total Participants : {event.Participants?.length || 0}
+                    Total Participants : {event.TotalRegisteredParticipants || event.Participants?.length || 0}
                   </div>
                 </div>
 
@@ -103,18 +175,21 @@ const BrowseEvents = () => {
                        className="organizer-avatar"
                        style={{
                          backgroundColor:
-                           event.OrganizerDetails?.Background || "#9c27b0",
-                         color: event.OrganizerDetails?.Foreground || "#fff",
+                           event.OrganizerDetails?.BackgroundColour || event.OrganizerDetails?.Background || event.organizerDetails?.backgroundColour || event.organizerDetails?.background || "#9c27b0",
+                         color: event.OrganizerDetails?.ForegroundColour || event.OrganizerDetails?.Foreground || event.organizerDetails?.foregroundColour || event.organizerDetails?.foreground || "#fff",
                        }}
                      >
-                       {event.OrganizerDetails?.OrganizerName
-                         ? event.OrganizerDetails.OrganizerName[0]
+                       {(event.OrganizerDetails?.OrganizerName || event.organizerDetails?.organizerName || event.organizerDetails?.name)
+                         ? (event.OrganizerDetails?.OrganizerName || event.organizerDetails?.organizerName || event.organizerDetails?.name)[0]
                          : "?"}
                      </span>
                      <span className="organizer-name">
-                       {event.OrganizerDetails?.OrganizerName && event.OrganizerDetails.OrganizerName.length > 12
-                         ? event.OrganizerDetails.OrganizerName.substring(0, 12) + ".."
-                         : event.OrganizerDetails?.OrganizerName || "Unknown Organizer"}
+                       {(() => {
+                         const organizerName = event.OrganizerDetails?.OrganizerName || event.organizerDetails?.organizerName || event.organizerDetails?.name;
+                         return organizerName && organizerName.length > 12
+                           ? organizerName.substring(0, 12) + ".."
+                           : organizerName || "Unknown Organizer";
+                       })()}
                      </span>
                    </div>
                    
@@ -124,7 +199,7 @@ const BrowseEvents = () => {
                      <div className="schedule-time">{timeRange}</div>
                    </div>
                    
-                   {event.IsPrivate && (
+                   {(event.IsPrivate || event.isPrivate || event.private) && (
                      <div className="private-indicator">
                        <span className="lock-icon">🔒</span>
                        <span className="private-text">Private</span>
@@ -132,15 +207,15 @@ const BrowseEvents = () => {
                    )}
                    
                    <button className="apply-button">
-                     {event.IsPrivate ? "Request" : "Join"}
+                     {(event.IsPrivate || event.isPrivate || event.private) ? "Request" : "Join"}
                    </button>
                  </div>
               </div>
             );
           })
-        ) : (
+        ) : !loading && !error ? (
           <p>No events found</p>
-        )}
+        ) : null}
       </div>
 
       {/* Participants Popover */}
@@ -156,7 +231,7 @@ const BrowseEvents = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="popover-header">
-              <h3>Participants ({selectedEvent.Participants?.length || 0})</h3>
+              <h3>Participants ({selectedEvent.TotalRegisteredParticipants || selectedEvent.Participants?.length || 0})</h3>
               <button className="popover-close" onClick={handleClosePopover}>×</button>
             </div>
             <div className="participants-list">
@@ -166,8 +241,8 @@ const BrowseEvents = () => {
                     <span
                       className="participant-avatar"
                       style={{
-                        backgroundColor: participant.Background || "#9c27b0",
-                        color: participant.Foreground || "#fff",
+                        backgroundColor: participant.BackgroundColour || participant.Background || "#9c27b0",
+                        color: participant.ForegroundColour || participant.Foreground || "#fff",
                       }}
                     >
                       {participant.ParticipantName ? participant.ParticipantName[0] : "?"}
