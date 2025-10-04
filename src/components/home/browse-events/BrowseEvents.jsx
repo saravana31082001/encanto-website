@@ -108,12 +108,10 @@ const BrowseEvents = () => {
               switch (action) {
                 case 'create':
                   // Add new event to the list in correct chronological order
-                  console.log('Adding new event:', event);
                   return insertEventInOrder(prevEvents, event);
                   
                 case 'update':
                   // Update existing event and maintain chronological order
-                  console.log('Updating event:', eventId);
                   const updatedEvents = prevEvents.map(prevEvent => {
                     const currentEventId = prevEvent.eventId;
                     return currentEventId === eventId ? event : prevEvent;
@@ -122,7 +120,6 @@ const BrowseEvents = () => {
                   
                 case 'delete':
                   // Remove event from the list
-                  console.log('Removing event:', eventId);
                   return prevEvents.filter(prevEvent => {
                     const currentEventId = prevEvent.eventId;
                     return currentEventId !== eventId;

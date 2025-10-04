@@ -135,7 +135,6 @@ export const getConnectionState = () => {
 // Subscribe to EventChanged messages
 export const subscribeToEventChanges = (callback) => {
   connection.on("EventChanged", (message) => {
-    console.log('Received EventChanged message:', message);
     callback(message);
   });
 };
