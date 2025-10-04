@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import "./BrowseEvents.css";
 import { useApiService } from "../../../services/apiService";
+import { 
+  startConnection, 
+  stopConnection, 
+  subscribeToEventChanges, 
+  unsubscribeFromEventChanges,
+  getConnectionState 
+} from "../../../signalrConnection";
 
 const BrowseEvents = () => {
   const [search, setSearch] = useState("");
@@ -10,8 +17,29 @@ const BrowseEvents = () => {
   const [eventsData, setEventsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState("Disconnected");
 
   const apiService = useApiService();
+
+  // Helper function to sort events by start time (earliest first)
+  const sortEventsByStartTime = (events) => {
+    return events.sort((a, b) => {
+      const startTimeA = a.StartTimestamp || a.startTimestamp || a.startTime || a.start_time;
+      const startTimeB = b.StartTimestamp || b.startTimestamp || b.startTime || b.start_time;
+      
+      if (!startTimeA && !startTimeB) return 0;
+      if (!startTimeA) return 1; // Put events without start time at the end
+      if (!startTimeB) return -1;
+      
+      return new Date(startTimeA) - new Date(startTimeB);
+    });
+  };
+
+  // Helper function to insert event in correct chronological order
+  const insertEventInOrder = (events, newEvent) => {
+    const newEvents = [...events, newEvent];
+    return sortEventsByStartTime(newEvents);
+  };
 
   // Load events data from API on component mount
   useEffect(() => {
@@ -21,7 +49,8 @@ const BrowseEvents = () => {
         setError(null);
         const events = await apiService.getBrowseUpcomingEvents();
         const eventsArray = Array.isArray(events) ? events : [events];
-        setEventsData(eventsArray);
+        const sortedEvents = sortEventsByStartTime(eventsArray);
+        setEventsData(sortedEvents);
       } catch (err) {
         console.error('Failed to load events:', err);
         setError(err.message || 'Failed to load events');
@@ -34,14 +63,128 @@ const BrowseEvents = () => {
     loadEvents();
   }, []); // Empty dependency array to run only once on mount
 
+  // SignalR connection and real-time updates
+  useEffect(() => {
+    let isMounted = true;
+    let connectionInitialized = false;
+
+    const initializeSignalR = async () => {
+      try {
+        // Only start if component is still mounted and connection not already initialized
+        if (!isMounted || connectionInitialized) return;
+        
+        await startConnection();
+        connectionInitialized = true;
+        
+        if (isMounted) {
+          setConnectionStatus("Connected");
+        }
+
+        // Subscribe to EventChanged messages
+        subscribeToEventChanges((message) => {
+          if (!isMounted) return;
+
+          console.log('Received real-time event update:', message);
+          
+          // Handle both capitalized and lowercase property names
+          const action = message.Action || message.action;
+          const event = message.Event || message.event;
+          
+          if (!action || !event) {
+            console.warn('Invalid message format:', message);
+            return;
+          }
+          
+          setEventsData(prevEvents => {
+            try {
+              // Use eventId as the primary key (as specified in your message structure)
+              const eventId = event.eventId;
+              
+              if (!eventId) {
+                console.warn('Event missing eventId:', event);
+                return prevEvents;
+              }
+              
+              switch (action) {
+                case 'create':
+                  // Add new event to the list in correct chronological order
+                  console.log('Adding new event:', event);
+                  return insertEventInOrder(prevEvents, event);
+                  
+                case 'update':
+                  // Update existing event and maintain chronological order
+                  console.log('Updating event:', eventId);
+                  const updatedEvents = prevEvents.map(prevEvent => {
+                    const currentEventId = prevEvent.eventId;
+                    return currentEventId === eventId ? event : prevEvent;
+                  });
+                  return sortEventsByStartTime(updatedEvents);
+                  
+                case 'delete':
+                  // Remove event from the list
+                  console.log('Removing event:', eventId);
+                  return prevEvents.filter(prevEvent => {
+                    const currentEventId = prevEvent.eventId;
+                    return currentEventId !== eventId;
+                  });
+                  
+                default:
+                  console.warn('Unknown action received:', action);
+                  return prevEvents;
+              }
+            } catch (error) {
+              console.error('Error processing real-time update:', error);
+              return prevEvents; // Return unchanged state on error
+            }
+          });
+        });
+
+      } catch (error) {
+        console.error('Failed to initialize SignalR:', error);
+        if (isMounted) {
+          setConnectionStatus("Disconnected");
+        }
+      }
+    };
+
+    // Monitor connection status
+    const statusInterval = setInterval(() => {
+      if (isMounted) {
+        const state = getConnectionState();
+        setConnectionStatus(state.isConnected ? "Connected" : "Disconnected");
+      }
+    }, 1000);
+
+    // Initialize SignalR with a small delay to avoid race conditions
+    const initTimeout = setTimeout(() => {
+      initializeSignalR();
+    }, 100);
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      clearTimeout(initTimeout);
+      clearInterval(statusInterval);
+      
+      // Only cleanup if we actually initialized the connection
+      if (connectionInitialized) {
+        unsubscribeFromEventChanges();
+        stopConnection().catch(console.error);
+      }
+    };
+  }, []); // Empty dependency array to run only once on mount
+
+  // Ensure we have a valid events array to prevent blank screen
+  const safeEventsData = Array.isArray(eventsData) ? eventsData : [];
+
   // Filter events by title
-  const filteredEvents = eventsData.length > 0 ? eventsData.filter((event) => {
+  const filteredEvents = safeEventsData.length > 0 ? safeEventsData.filter((event) => {
     if (!event) {
       return false;
     }
     
-    // Try different possible property names for title
-    const title = event.Title || event.title || event.eventTitle || event.name || event.eventName;
+    // Try different possible property names for title (prioritize lowercase 'title' from your message structure)
+    const title = event.title || event.Title || event.eventTitle || event.name || event.eventName;
     
     if (!title) {
       return false;
@@ -126,6 +269,16 @@ const BrowseEvents = () => {
 
   return (
     <div className="browse-events-container">
+      {/* Connection Status - Only show in development mode (localhost) */}
+      {window.location.hostname === 'localhost' && false &&(
+        <div className="connection-status">
+          <div className={`status-indicator ${connectionStatus.toLowerCase()}`}>
+            <span className="status-dot"></span>
+            <span className="status-text">Real-time: {connectionStatus}</span>
+          </div>
+        </div>
+      )}
+
       {/* Search bar */}
       <input
         type="text"
@@ -157,14 +310,14 @@ const BrowseEvents = () => {
                 {/* Left Section - Event Details */}
                  <div className="event-left-section">
                    <div className="event-header">
-                     <h2 className="event-title">{event.Title || event.title || event.eventTitle || event.name || event.eventName || 'Untitled Event'}</h2>
+                     <h2 className="event-title">{event.title || event.Title || event.eventTitle || event.name || event.eventName || 'Untitled Event'}</h2>
                    </div>
-                   <p className="event-description">{event.Description || event.description || event.eventDescription || 'No description available'}</p>
+                   <p className="event-description">{event.description || event.Description || event.eventDescription || 'No description available'}</p>
                   <div 
                     className={`participants-badge ${!(event.IsPrivate || event.isPrivate || event.private) ? 'clickable' : ''}`}
                     onClick={!(event.IsPrivate || event.isPrivate || event.private) ? (e) => handleParticipantsClick(event, e.currentTarget) : undefined}
                   >
-                    Total Participants : {event.TotalRegisteredParticipants || event.Participants?.length || 0}
+                    Total Participants : {event.totalRegisteredParticipants || event.TotalRegisteredParticipants || event.Participants?.length || 0}
                   </div>
                 </div>
 
