@@ -4,6 +4,17 @@ import { useApp } from '../../context/AppContext';
 
 const Profile = () => {
   const [isEditNamePopupOpen, setIsEditNamePopupOpen] = useState(false);
+  const [isEditGenderPopupOpen, setIsEditGenderPopupOpen] = useState(false);
+  const [isEditBirthdayPopupOpen, setIsEditBirthdayPopupOpen] = useState(false);
+  const [isEditPhonePopupOpen, setIsEditPhonePopupOpen] = useState(false);
+  const [isEditAddressPopupOpen, setIsEditAddressPopupOpen] = useState(false);
+  const [isEditDesignationPopupOpen, setIsEditDesignationPopupOpen] = useState(false);
+  const [isEditOrganizationPopupOpen, setIsEditOrganizationPopupOpen] = useState(false);
+  const [isEditIndustryPopupOpen, setIsEditIndustryPopupOpen] = useState(false);
+  const [isEditEmploymentTypePopupOpen, setIsEditEmploymentTypePopupOpen] = useState(false);
+  const [isEditWorkLocationPopupOpen, setIsEditWorkLocationPopupOpen] = useState(false);
+  const [isEditWorkEmailPopupOpen, setIsEditWorkEmailPopupOpen] = useState(false);
+  const [isEditWorkPhonePopupOpen, setIsEditWorkPhonePopupOpen] = useState(false);
   const { user, loading, error } = useApp(); // Get user data from context instead of API call
 
   // Use user data from context (no additional API call needed)
@@ -74,10 +85,50 @@ const Profile = () => {
 
   const handleEditClick = (field) => {
     // Handle edit functionality for specific field
-    if (field === 'name') {
-      setIsEditNamePopupOpen(true);
+    switch (field) {
+      case 'name':
+        setIsEditNamePopupOpen(true);
+        break;
+      case 'gender':
+        setIsEditGenderPopupOpen(true);
+        break;
+      case 'birthday':
+        setIsEditBirthdayPopupOpen(true);
+        break;
+      case 'phone':
+        setIsEditPhonePopupOpen(true);
+        break;
+      case 'address':
+        setIsEditAddressPopupOpen(true);
+        break;
+      case 'designation':
+        setIsEditDesignationPopupOpen(true);
+        break;
+      case 'organization':
+        setIsEditOrganizationPopupOpen(true);
+        break;
+      case 'industry':
+        setIsEditIndustryPopupOpen(true);
+        break;
+      case 'employmentType':
+        setIsEditEmploymentTypePopupOpen(true);
+        break;
+      case 'workLocation':
+        setIsEditWorkLocationPopupOpen(true);
+        break;
+      case 'workEmail':
+        setIsEditWorkEmailPopupOpen(true);
+        break;
+      case 'workPhone':
+        setIsEditWorkPhonePopupOpen(true);
+        break;
+      case 'email':
+        // Email is not editable, just show a message or do nothing
+        console.log('Email editing is not allowed');
+        break;
+      default:
+        console.log(`Edit ${field}`);
     }
-    console.log(`Edit ${field}`);
   };
 
   // Get colors from user profile data with fallback defaults
@@ -145,16 +196,14 @@ const Profile = () => {
           <h2>Contact info</h2>
           
           <div className="profile-items">
-            <div className="profile-item" onClick={() => handleEditClick('email')}>
+            <div className="profile-item profile-item-non-editable">
               <div className="item-left">
                 <span className="item-label">Email</span>
                 <span className="item-value">{userProfile.email}</span>
                 <span className="item-description">{getVerificationStatus()}</span>
               </div>
               <div className="item-right">
-                <svg className="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="9,18 15,12 9,6"></polyline>
-                </svg>
+                <span className="non-editable-indicator">Not editable</span>
               </div>
             </div>
 
@@ -307,6 +356,481 @@ const Profile = () => {
                 onClick={() => {
                   // Save functionality will be added later
                   setIsEditNamePopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Gender Popup */}
+      {isEditGenderPopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Gender</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="gender-input" className="popup-label">Gender</label>
+              <select
+                id="gender-input"
+                className="popup-input popup-select"
+                defaultValue={userProfile.gender || ''}
+              >
+                <option value="">Select gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditGenderPopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditGenderPopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Birthday Popup */}
+      {isEditBirthdayPopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Birthday</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="birthday-input" className="popup-label">Date of Birth</label>
+              <input
+                id="birthday-input"
+                type="date"
+                className="popup-input"
+                defaultValue={userProfile.dateOfBirth ? userProfile.dateOfBirth.split('T')[0] : ''}
+              />
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditBirthdayPopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditBirthdayPopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Phone Popup */}
+      {isEditPhonePopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Phone Number</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="phone-input" className="popup-label">Phone Number</label>
+              <input
+                id="phone-input"
+                type="tel"
+                className="popup-input"
+                defaultValue={userProfile.phoneNumber || ''}
+                placeholder="Enter your phone number"
+              />
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditPhonePopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditPhonePopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Address Popup */}
+      {isEditAddressPopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Home Address</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="street-input" className="popup-label">Street Address</label>
+              <input
+                id="street-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.address?.streetAddress || ''}
+                placeholder="Enter street address"
+              />
+              
+              <label htmlFor="city-input" className="popup-label">City</label>
+              <input
+                id="city-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.address?.city || ''}
+                placeholder="Enter city"
+              />
+              
+              <label htmlFor="state-input" className="popup-label">State</label>
+              <input
+                id="state-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.address?.state || ''}
+                placeholder="Enter state"
+              />
+              
+              <label htmlFor="postal-input" className="popup-label">Postal Code</label>
+              <input
+                id="postal-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.address?.postalCode || ''}
+                placeholder="Enter postal code"
+              />
+              
+              <label htmlFor="landmark-input" className="popup-label">Landmark (Optional)</label>
+              <input
+                id="landmark-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.address?.landmark || ''}
+                placeholder="Enter nearby landmark"
+              />
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditAddressPopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditAddressPopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Designation Popup */}
+      {isEditDesignationPopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Designation</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="designation-input" className="popup-label">Designation</label>
+              <input
+                id="designation-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.designation || ''}
+                placeholder="Enter your designation"
+              />
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditDesignationPopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditDesignationPopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Organization Popup */}
+      {isEditOrganizationPopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Organization</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="organization-input" className="popup-label">Organization Name</label>
+              <input
+                id="organization-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.organizationName || ''}
+                placeholder="Enter organization name"
+              />
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditOrganizationPopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditOrganizationPopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Industry Popup */}
+      {isEditIndustryPopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Industry Domain</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="industry-input" className="popup-label">Industry Domain</label>
+              <input
+                id="industry-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.industryDomain || ''}
+                placeholder="Enter industry domain"
+              />
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditIndustryPopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditIndustryPopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Employment Type Popup */}
+      {isEditEmploymentTypePopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Employment Type</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="employment-input" className="popup-label">Employment Type</label>
+              <select
+                id="employment-input"
+                className="popup-input popup-select"
+                defaultValue={userProfile.occupationDetails?.employmentType || ''}
+              >
+                <option value="">Select employment type</option>
+                <option value="Full-time">Full-time</option>
+                <option value="Part-time">Part-time</option>
+                <option value="Contract">Contract</option>
+                <option value="Freelance">Freelance</option>
+                <option value="Internship">Internship</option>
+                <option value="Self-employed">Self-employed</option>
+                <option value="Unemployed">Unemployed</option>
+                <option value="Student">Student</option>
+                <option value="Retired">Retired</option>
+              </select>
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditEmploymentTypePopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditEmploymentTypePopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Work Location Popup */}
+      {isEditWorkLocationPopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Work Location</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="work-city-input" className="popup-label">Work City</label>
+              <input
+                id="work-city-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.jobLocation?.city || ''}
+                placeholder="Enter work city"
+              />
+              
+              <label htmlFor="work-state-input" className="popup-label">Work State</label>
+              <input
+                id="work-state-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.jobLocation?.state || ''}
+                placeholder="Enter work state"
+              />
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditWorkLocationPopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditWorkLocationPopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Work Email Popup */}
+      {isEditWorkEmailPopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Work Email</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="work-email-input" className="popup-label">Work Email</label>
+              <input
+                id="work-email-input"
+                type="email"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.workEmail || ''}
+                placeholder="Enter work email"
+              />
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditWorkEmailPopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditWorkEmailPopupOpen(false);
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Work Phone Popup */}
+      {isEditWorkPhonePopupOpen && (
+        <div className="popup-overlay">
+          <div className="popup-container">
+            <div className="popup-header">
+              <h3>Edit Work Phone</h3>
+            </div>
+            <div className="popup-content">
+              <label htmlFor="work-phone-input" className="popup-label">Work Phone Number</label>
+              <input
+                id="work-phone-input"
+                type="tel"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.workPhoneNumber || ''}
+                placeholder="Enter work phone number"
+              />
+            </div>
+            <div className="popup-buttons">
+              <button 
+                className="popup-button popup-button-cancel"
+                onClick={() => setIsEditWorkPhonePopupOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="popup-button popup-button-save"
+                onClick={() => {
+                  // Save functionality will be added later
+                  setIsEditWorkPhonePopupOpen(false);
                 }}
               >
                 Save
