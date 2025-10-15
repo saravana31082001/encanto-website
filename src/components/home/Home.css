@@ -86,10 +86,10 @@ nav li {
   font-size: 1rem;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   color: #333;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
 }
 
 nav li:hover {
@@ -100,8 +100,11 @@ nav li:hover {
 nav li.active {
   background-color: #e7efff;
   color: #1e56d1;
-  font-weight: 600;
   border-radius: 3px;
+}
+
+nav li.active .icon {
+  filter: brightness(0) saturate(100%) invert(27%) sepia(100%) saturate(1000%) hue-rotate(200deg) brightness(0.9) contrast(1.2);
 }
 
 nav li.logout-item {
@@ -114,8 +117,27 @@ nav li.logout-item:hover {
   border-radius: 3px;
 }
 
+nav li.logout-item .icon {
+  filter: brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7151%) hue-rotate(4deg) brightness(95%) contrast(118%);
+}
+
+nav li.logout-item:hover .icon {
+  filter: brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7151%) hue-rotate(4deg) brightness(95%) contrast(118%);
+}
+
 .icon {
-  font-size: 1.2rem;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+nav li:hover .icon {
+  transform: scale(1.1);
+}
+
+nav li.active .icon {
+  transform: scale(1.05);
 }
 
 .main-content {

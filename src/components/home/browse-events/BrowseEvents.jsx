@@ -266,6 +266,12 @@ const BrowseEvents = () => {
 
   return (
     <div className="browse-events-container">
+      {/* Header with gradient line */}
+      <div className="browse-events-header">
+        <h1>Browse Events</h1>
+        <p>Discover and join exciting events happening around you</p>
+      </div>
+
       {/* Connection Status - Only show in development mode (localhost) */}
       {window.location.hostname === 'localhost' && false &&(
         <div className="connection-status">
