@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Profile.css';
 import { useApp } from '../../context/AppContext';
+import { useApiService } from '../../services/apiService';
 
 const Profile = () => {
   const [isEditNamePopupOpen, setIsEditNamePopupOpen] = useState(false);
@@ -15,7 +16,10 @@ const Profile = () => {
   const [isEditWorkLocationPopupOpen, setIsEditWorkLocationPopupOpen] = useState(false);
   const [isEditWorkEmailPopupOpen, setIsEditWorkEmailPopupOpen] = useState(false);
   const [isEditWorkPhonePopupOpen, setIsEditWorkPhonePopupOpen] = useState(false);
-  const { user, loading, error } = useApp(); // Get user data from context instead of API call
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const { user, loading, error, updateUser } = useApp(); // Get user data from context instead of API call
+  const { updateProfile } = useApiService();
 
   // Use user data from context (no additional API call needed)
   const userProfile = user;
@@ -48,6 +52,175 @@ const Profile = () => {
   const getVerificationStatus = () => {
     if (!userProfile) return '';
     return userProfile.isEmailVerified ? 'Verified' : 'Not Verified';
+  };
+
+  // Generic save function for profile updates
+  const handleSaveProfile = async (field, getValue) => {
+    setIsSaving(true);
+    setSaveError(null);
+    
+    try {
+      const value = getValue();
+      let updateData = {};
+      
+      // Prepare update data based on field type
+      switch (field) {
+        case 'name':
+          updateData = { name: value };
+          break;
+        case 'gender':
+          updateData = { gender: value };
+          break;
+        case 'birthday':
+          updateData = { dateOfBirth: value };
+          break;
+        case 'phone':
+          updateData = { phoneNumber: value };
+          break;
+        case 'address':
+          updateData = { 
+            address: {
+              streetAddress: value.streetAddress,
+              city: value.city,
+              state: value.state,
+              postalCode: value.postalCode,
+              landmark: value.landmark
+            }
+          };
+          break;
+        case 'designation':
+          updateData = { 
+            occupationDetails: {
+              ...userProfile.occupationDetails,
+              designation: value
+            }
+          };
+          break;
+        case 'organization':
+          updateData = { 
+            occupationDetails: {
+              ...userProfile.occupationDetails,
+              organizationName: value
+            }
+          };
+          break;
+        case 'industry':
+          updateData = { 
+            occupationDetails: {
+              ...userProfile.occupationDetails,
+              industryDomain: value
+            }
+          };
+          break;
+        case 'employmentType':
+          updateData = { 
+            occupationDetails: {
+              ...userProfile.occupationDetails,
+              employmentType: value
+            }
+          };
+          break;
+        case 'workLocation':
+          updateData = { 
+            occupationDetails: {
+              ...userProfile.occupationDetails,
+              jobLocation: {
+                city: value.city,
+                state: value.state
+              }
+            }
+          };
+          break;
+        case 'workEmail':
+          updateData = { 
+            occupationDetails: {
+              ...userProfile.occupationDetails,
+              workEmail: value
+            }
+          };
+          break;
+        case 'workPhone':
+          updateData = { 
+            occupationDetails: {
+              ...userProfile.occupationDetails,
+              workPhoneNumber: value
+            }
+          };
+          break;
+        default:
+          throw new Error('Unknown field type');
+      }
+      
+      // Try to call API to update profile
+      try {
+        // Add userId to updateData for API calls that need it
+        // Debug: Log the user profile to see available ID fields
+        console.log('User profile data:', userProfile);
+        const userId = userProfile.id || userProfile._id || userProfile.userId || userProfile.Id;
+        console.log('Extracted userId:', userId);
+        
+        const updateDataWithUserId = {
+          ...updateData,
+          userId: userId
+        };
+        await updateProfile(updateDataWithUserId);
+        // If successful, refresh user data from context
+        await updateUser();
+      } catch (apiError) {
+        // If API call fails (404 or other error), show a message but don't throw
+        console.warn('API update failed, showing temporary message:', apiError);
+        setSaveError('Profile update functionality is not yet available on the server. Your changes will be lost when you refresh the page.');
+        
+        // For now, we'll just close the popup without saving
+        // In a real scenario, you might want to store changes locally or show a different message
+      }
+      
+      // Close the popup
+      switch (field) {
+        case 'name':
+          setIsEditNamePopupOpen(false);
+          break;
+        case 'gender':
+          setIsEditGenderPopupOpen(false);
+          break;
+        case 'birthday':
+          setIsEditBirthdayPopupOpen(false);
+          break;
+        case 'phone':
+          setIsEditPhonePopupOpen(false);
+          break;
+        case 'address':
+          setIsEditAddressPopupOpen(false);
+          break;
+        case 'designation':
+          setIsEditDesignationPopupOpen(false);
+          break;
+        case 'organization':
+          setIsEditOrganizationPopupOpen(false);
+          break;
+        case 'industry':
+          setIsEditIndustryPopupOpen(false);
+          break;
+        case 'employmentType':
+          setIsEditEmploymentTypePopupOpen(false);
+          break;
+        case 'workLocation':
+          setIsEditWorkLocationPopupOpen(false);
+          break;
+        case 'workEmail':
+          setIsEditWorkEmailPopupOpen(false);
+          break;
+        case 'workPhone':
+          setIsEditWorkPhonePopupOpen(false);
+          break;
+      }
+      
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setSaveError(error.message || 'Failed to save profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (loading) {
@@ -84,6 +257,9 @@ const Profile = () => {
   }
 
   const handleEditClick = (field) => {
+    // Clear any previous errors when opening a popup
+    setSaveError(null);
+    
     // Handle edit functionality for specific field
     switch (field) {
       case 'name':
@@ -343,6 +519,11 @@ const Profile = () => {
                 defaultValue={userProfile.name}
                 placeholder="Enter your name"
               />
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -353,12 +534,10 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditNamePopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('name', () => document.getElementById('name-input').value)}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -382,9 +561,12 @@ const Profile = () => {
                 <option value="">Select gender</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
-                <option value="Other">Other</option>
-                <option value="Prefer not to say">Prefer not to say</option>
               </select>
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -395,12 +577,10 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditGenderPopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('gender', () => document.getElementById('gender-input').value)}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -422,6 +602,11 @@ const Profile = () => {
                 className="popup-input"
                 defaultValue={userProfile.dateOfBirth ? userProfile.dateOfBirth.split('T')[0] : ''}
               />
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -432,12 +617,10 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditBirthdayPopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('birthday', () => document.getElementById('birthday-input').value)}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -460,6 +643,11 @@ const Profile = () => {
                 defaultValue={userProfile.phoneNumber || ''}
                 placeholder="Enter your phone number"
               />
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -470,12 +658,10 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditPhonePopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('phone', () => document.getElementById('phone-input').value)}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -534,6 +720,11 @@ const Profile = () => {
                 defaultValue={userProfile.address?.landmark || ''}
                 placeholder="Enter nearby landmark"
               />
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -544,12 +735,16 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditAddressPopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('address', () => ({
+                  streetAddress: document.getElementById('street-input').value,
+                  city: document.getElementById('city-input').value,
+                  state: document.getElementById('state-input').value,
+                  postalCode: document.getElementById('postal-input').value,
+                  landmark: document.getElementById('landmark-input').value
+                }))}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -572,6 +767,11 @@ const Profile = () => {
                 defaultValue={userProfile.occupationDetails?.designation || ''}
                 placeholder="Enter your designation"
               />
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -582,12 +782,10 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditDesignationPopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('designation', () => document.getElementById('designation-input').value)}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -610,6 +808,11 @@ const Profile = () => {
                 defaultValue={userProfile.occupationDetails?.organizationName || ''}
                 placeholder="Enter organization name"
               />
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -620,12 +823,10 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditOrganizationPopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('organization', () => document.getElementById('organization-input').value)}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -648,6 +849,11 @@ const Profile = () => {
                 defaultValue={userProfile.occupationDetails?.industryDomain || ''}
                 placeholder="Enter industry domain"
               />
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -658,12 +864,10 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditIndustryPopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('industry', () => document.getElementById('industry-input').value)}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -695,6 +899,11 @@ const Profile = () => {
                 <option value="Student">Student</option>
                 <option value="Retired">Retired</option>
               </select>
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -705,12 +914,10 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditEmploymentTypePopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('employmentType', () => document.getElementById('employment-input').value)}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -742,6 +949,11 @@ const Profile = () => {
                 defaultValue={userProfile.occupationDetails?.jobLocation?.state || ''}
                 placeholder="Enter work state"
               />
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -752,12 +964,13 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditWorkLocationPopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('workLocation', () => ({
+                  city: document.getElementById('work-city-input').value,
+                  state: document.getElementById('work-state-input').value
+                }))}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -780,6 +993,11 @@ const Profile = () => {
                 defaultValue={userProfile.occupationDetails?.workEmail || ''}
                 placeholder="Enter work email"
               />
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -790,12 +1008,10 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditWorkEmailPopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('workEmail', () => document.getElementById('work-email-input').value)}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -818,6 +1034,11 @@ const Profile = () => {
                 defaultValue={userProfile.occupationDetails?.workPhoneNumber || ''}
                 placeholder="Enter work phone number"
               />
+              {saveError && (
+                <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="popup-buttons">
               <button 
@@ -828,12 +1049,10 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => {
-                  // Save functionality will be added later
-                  setIsEditWorkPhonePopupOpen(false);
-                }}
+                onClick={() => handleSaveProfile('workPhone', () => document.getElementById('work-phone-input').value)}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>

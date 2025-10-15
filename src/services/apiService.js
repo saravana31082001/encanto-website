@@ -323,6 +323,29 @@ export const user = {
   // Get comprehensive user details
   async getDetails() {
     return await getProfileDetails('/profileinfo');
+  },
+
+  // Update user profile information
+  async updateProfile(profileData) {
+    // Check for specific field updates and use appropriate endpoints
+    if (profileData.gender !== undefined) {
+      // Format data according to the expected request format
+      const genderUpdateData = {
+        userId: profileData.userId || '',
+        gender: profileData.gender,
+        updatedTimestamp: Date.now()
+      };
+      return await makeApiCall('/Update-user-gender', 'PUT', genderUpdateData);
+    }
+    if (profileData.phoneNumber !== undefined) {
+      return await makeApiCall('/Update-user-Phn', 'PUT', profileData);
+    }
+    if (profileData.name !== undefined) {
+      return await makeApiCall('/Update-user-name', 'PUT', profileData);
+    }
+    // For other profile updates, we'll need to implement specific endpoints
+    // For now, fall back to the original endpoint
+    return await makeApiCall('/user/profile', 'PUT', profileData);
   }
 };
 
@@ -366,6 +389,7 @@ export const useApiService = () => {
     // User management methods
     getUserProfile: user.getProfile,
     getUserDetails: user.getDetails,
+    updateProfile: user.updateProfile,
 
     // Event management methods
     getAllEvents: events.getAll,
