@@ -35,9 +35,6 @@ async function makeApiCall(endpoint, method = 'GET', data = null) {
     // Execute API request
     const response = await fetch(url, options);
 
-    console.log('API response status:', response.status);
-    console.log('API response headers:', [...response.headers.entries()]);
-
 
     // Handle session key from response (for authentication)
     const responseSessionKey = response.headers.get('session-key');
@@ -53,8 +50,18 @@ async function makeApiCall(endpoint, method = 'GET', data = null) {
       throw new Error(`API Error: ${response.status} - ${response.statusText}`);
     }
 
-    // Return parsed response
-    return await response.json();
+    // Return parsed response, handling empty responses
+    const responseText = await response.text();
+    if (responseText.trim() === '') {
+      // Return success indicator for empty responses
+      return { success: true, message: 'Operation completed successfully' };
+    }
+    try {
+      return JSON.parse(responseText);
+    } catch (parseError) {
+      // If it's not valid JSON, return the text response
+      return { success: true, message: responseText };
+    }
   } catch (error) {
     console.error('API call failed:', error);
     throw error;
@@ -377,6 +384,41 @@ export const user = {
   // Get comprehensive user details
   async getDetails() {
     return await getProfileDetails('/profileinfo');
+  },
+
+  // Update user profile information
+  async updateProfile(profileData) {
+    // Check for specific field updates and use appropriate endpoints
+    if (profileData.gender !== undefined) {
+      // Format data according to the expected request format
+      const genderUpdateData = {
+        userId: profileData.userId || '',
+        gender: profileData.gender,
+        updatedTimestamp: Date.now()
+      };
+      return await makeApiCall('/update-user-gender', 'PUT', genderUpdateData);
+    }
+    if (profileData.phoneNumber !== undefined) {
+      // Format data according to UserPhnUpdateRequest
+      const phoneUpdateData = {
+        userId: profileData.userId || '',
+        phoneNumber: profileData.phoneNumber,
+        updatedTimestamp: Date.now()
+      };
+      return await makeApiCall('/update-user-phone', 'PUT', phoneUpdateData);
+    }
+    if (profileData.name !== undefined) {
+      // Format data according to UserNameUpdateRequest
+      const nameUpdateData = {
+        userId: profileData.userId || '',
+        name: profileData.name,
+        updatedTimestamp: Date.now()
+      };
+      return await makeApiCall('/update-user-name', 'PUT', nameUpdateData);
+    }
+    // For other profile updates, we'll need to implement specific endpoints
+    // For now, fall back to the original endpoint
+    return await makeApiCall('/user/profile', 'PUT', profileData);
   }
 };
 
@@ -430,6 +472,7 @@ export const useApiService = () => {
     // User management methods
     getUserProfile: user.getProfile,
     getUserDetails: user.getDetails,
+    updateProfile: user.updateProfile,
 
     // Event management methods
     getAllEvents: events.getAll,

@@ -219,6 +219,18 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Update user function to refresh user data after profile updates
+  const updateUser = async () => {
+    try {
+      const userData = await user.getDetails();
+      dispatch({ type: actionTypes.SET_USER, payload: userData });
+      return userData;
+    } catch (error) {
+      console.error('Error updating user data:', error);
+      throw error;
+    }
+  };
+
   // Initialize app on component mount
   useEffect(() => {
     initializeApp();
@@ -229,6 +241,7 @@ export const AppProvider = ({ children }) => {
     login,
     logout,
     initializeApp,
+    updateUser,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
