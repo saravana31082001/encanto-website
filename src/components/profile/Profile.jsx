@@ -32,6 +32,10 @@ const Profile = () => {
     if (num.length === 12 && num.startsWith('91')) {
       return `+91 ${num.slice(2, 7)} ${num.slice(7)}`;
     }
+    // If it already has +91 prefix, format it nicely
+    if (num.startsWith('+91') && num.length === 13) {
+      return `+91 ${num.slice(3, 8)} ${num.slice(8)}`;
+    }
     // Fallback for other formats
     return `+${num}`;
   };
@@ -63,19 +67,64 @@ const Profile = () => {
       const value = getValue();
       let updateData = {};
       
-      // Prepare update data based on field type
+      // Validation logic
       switch (field) {
         case 'name':
-          updateData = { name: value };
+          if (!value || value.trim() === '') {
+            setSaveError('Name cannot be empty.');
+            setIsSaving(false);
+            return;
+          }
+          updateData = { name: value.trim() };
+          break;
+        case 'phone':
+          if (!value || value.trim() === '') {
+            setSaveError('Phone number cannot be empty.');
+            setIsSaving(false);
+            return;
+          }
+          // Remove any non-digit characters for validation
+          const phoneDigits = value.replace(/\D/g, '');
+          if (phoneDigits.length !== 10) {
+            setSaveError('Phone number must have exactly 10 digits.');
+            setIsSaving(false);
+            return;
+          }
+          // Add +91 prefix for API call
+          updateData = { phoneNumber: `+91${phoneDigits}` };
+          break;
+        case 'workPhone':
+          if (!value || value.trim() === '') {
+            setSaveError('Work phone number cannot be empty.');
+            setIsSaving(false);
+            return;
+          }
+          // Remove any non-digit characters for validation
+          const workPhoneDigits = value.replace(/\D/g, '');
+          if (workPhoneDigits.length !== 10) {
+            setSaveError('Work phone number must have exactly 10 digits.');
+            setIsSaving(false);
+            return;
+          }
+          // Add +91 prefix for API call
+          updateData = { 
+            occupationDetails: {
+              ...userProfile.occupationDetails,
+              workPhoneNumber: `+91${workPhoneDigits}`
+            }
+          };
           break;
         case 'gender':
+          // Validate gender - don't send empty values
+          if (!value || value.trim() === '') {
+            setSaveError('Please select a gender.');
+            setIsSaving(false);
+            return;
+          }
           updateData = { gender: value };
           break;
         case 'birthday':
           updateData = { dateOfBirth: value };
-          break;
-        case 'phone':
-          updateData = { phoneNumber: value };
           break;
         case 'address':
           updateData = { 
@@ -139,25 +188,13 @@ const Profile = () => {
             }
           };
           break;
-        case 'workPhone':
-          updateData = { 
-            occupationDetails: {
-              ...userProfile.occupationDetails,
-              workPhoneNumber: value
-            }
-          };
-          break;
         default:
           throw new Error('Unknown field type');
       }
       
       // Try to call API to update profile
       try {
-        // Add userId to updateData for API calls that need it
-        // Debug: Log the user profile to see available ID fields
-        console.log('User profile data:', userProfile);
-        const userId = userProfile.id || userProfile._id || userProfile.userId || userProfile.Id;
-        console.log('Extracted userId:', userId);
+        const userId = userProfile.userId || userProfile._id || userProfile.Id;
         
         const updateDataWithUserId = {
           ...updateData,
@@ -640,8 +677,18 @@ const Profile = () => {
                 id="phone-input"
                 type="tel"
                 className="popup-input"
-                defaultValue={userProfile.phoneNumber || ''}
-                placeholder="Enter your phone number"
+                defaultValue={userProfile.phoneNumber && typeof userProfile.phoneNumber === 'string' ? userProfile.phoneNumber.replace(/^\+91/, '') : ''}
+                placeholder="Enter 10-digit phone number"
+                maxLength="10"
+                pattern="[0-9]{10}"
+                onInput={(e) => {
+                  // Only allow digits
+                  e.target.value = e.target.value.replace(/\D/g, '');
+                  // Limit to 10 digits
+                  if (e.target.value.length > 10) {
+                    e.target.value = e.target.value.slice(0, 10);
+                  }
+                }}
               />
               {saveError && (
                 <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
@@ -1031,8 +1078,18 @@ const Profile = () => {
                 id="work-phone-input"
                 type="tel"
                 className="popup-input"
-                defaultValue={userProfile.occupationDetails?.workPhoneNumber || ''}
-                placeholder="Enter work phone number"
+                defaultValue={userProfile.occupationDetails?.workPhoneNumber && typeof userProfile.occupationDetails.workPhoneNumber === 'string' ? userProfile.occupationDetails.workPhoneNumber.replace(/^\+91/, '') : ''}
+                placeholder="Enter 10-digit work phone number"
+                maxLength="10"
+                pattern="[0-9]{10}"
+                onInput={(e) => {
+                  // Only allow digits
+                  e.target.value = e.target.value.replace(/\D/g, '');
+                  // Limit to 10 digits
+                  if (e.target.value.length > 10) {
+                    e.target.value = e.target.value.slice(0, 10);
+                  }
+                }}
               />
               {saveError && (
                 <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>

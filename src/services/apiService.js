@@ -3,7 +3,7 @@
 //Comment for updation
 
 const API_BASE_URL = 'https://encanto-webapi.azurewebsites.net';
-//const API_BASE_URL = 'https://localhost:44330';
+//const API_BASE_URL = 'https://localhost:7207';
 
 
 // 🔧 Core API request handlers
@@ -35,9 +35,6 @@ async function makeApiCall(endpoint, method = 'GET', data = null) {
     // Execute API request
     const response = await fetch(url, options);
 
-    console.log('API response status:', response.status);
-    console.log('API response headers:', [...response.headers.entries()]);
-
 
     // Handle session key from response (for authentication)
     const responseSessionKey = response.headers.get('session-key');
@@ -53,8 +50,18 @@ async function makeApiCall(endpoint, method = 'GET', data = null) {
       throw new Error(`API Error: ${response.status} - ${response.statusText}`);
     }
 
-    // Return parsed response
-    return await response.json();
+    // Return parsed response, handling empty responses
+    const responseText = await response.text();
+    if (responseText.trim() === '') {
+      // Return success indicator for empty responses
+      return { success: true, message: 'Operation completed successfully' };
+    }
+    try {
+      return JSON.parse(responseText);
+    } catch (parseError) {
+      // If it's not valid JSON, return the text response
+      return { success: true, message: responseText };
+    }
   } catch (error) {
     console.error('API call failed:', error);
     throw error;
@@ -335,13 +342,25 @@ export const user = {
         gender: profileData.gender,
         updatedTimestamp: Date.now()
       };
-      return await makeApiCall('/Update-user-gender', 'PUT', genderUpdateData);
+      return await makeApiCall('/update-user-gender', 'PUT', genderUpdateData);
     }
     if (profileData.phoneNumber !== undefined) {
-      return await makeApiCall('/Update-user-Phn', 'PUT', profileData);
+      // Format data according to UserPhnUpdateRequest
+      const phoneUpdateData = {
+        userId: profileData.userId || '',
+        phoneNumber: profileData.phoneNumber,
+        updatedTimestamp: Date.now()
+      };
+      return await makeApiCall('/update-user-phone', 'PUT', phoneUpdateData);
     }
     if (profileData.name !== undefined) {
-      return await makeApiCall('/Update-user-name', 'PUT', profileData);
+      // Format data according to UserNameUpdateRequest
+      const nameUpdateData = {
+        userId: profileData.userId || '',
+        name: profileData.name,
+        updatedTimestamp: Date.now()
+      };
+      return await makeApiCall('/update-user-name', 'PUT', nameUpdateData);
     }
     // For other profile updates, we'll need to implement specific endpoints
     // For now, fall back to the original endpoint
