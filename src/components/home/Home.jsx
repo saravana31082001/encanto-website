@@ -3,6 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import EncantoLogo from '../../assets/SVG/EncantoLogo.svg';
+import DashboardIcon from '../../assets/SVG/DashboardIcon.svg';
+import NewEventIcon from '../../assets/SVG/NewEventIcon.svg';
+import MyEventsIcon from '../../assets/SVG/MyEventsIcon.svg';
+import ManageRequestsIcon from '../../assets/SVG/ManageRequestsIcon.svg';
+import BrowseEventsIcon from '../../assets/SVG/BrowseEventsIcon.svg';
+import RegisteredEventsIcon from '../../assets/SVG/RegisteredEventsIcon.svg';
+import EventHistoryIcon from '../../assets/SVG/EventHistoryIcon.svg';
+import LogoutIcon from '../../assets/SVG/LogoutIcon.svg';
 import './Home.css';
 
 // Lazy load components for code splitting
@@ -74,20 +82,20 @@ const Home = ({ activeSection }) => {
     
     if (isHost) {
       return [
-        { name: 'Dashboard', component: 'Dashboard', icon: '📅', path: '/dashboard' },
-        { name: 'New Event', component: 'NewEvent', icon: '➕', path: '/create' },
-        { name: 'My Events', component: 'MyEvents', icon: '📋', path: '/events' },
-        { name: 'Manage Requests', component: 'ManageRequests', icon: '⚙️', path: '/manage' },
-        { name: 'Logout', component: 'Logout', icon: '➜]', path: '/login' }
+        { name: 'Dashboard', component: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
+        { name: 'New Event', component: 'NewEvent', icon: NewEventIcon, path: '/create' },
+        { name: 'My Events', component: 'MyEvents', icon: MyEventsIcon, path: '/events' },
+        { name: 'Manage Requests', component: 'ManageRequests', icon: ManageRequestsIcon, path: '/manage' },
+        { name: 'Logout', component: 'Logout', icon: LogoutIcon, path: '/login' }
       ];
     } else {
       // Guest menu items
       return [
-        { name: 'Dashboard', component: 'Dashboard', icon: '📅', path: '/dashboard' },
-        { name: 'Browse Events', component: 'BrowseEvents', icon: '🔎', path: '/browse' },
-        { name: 'Registered Events', component: 'RegisteredEvents', icon: '🗳️', path: '/registered' },
-        { name: 'Event History', component: 'EventHistory', icon: '⌛', path: '/history' },
-        { name: 'Logout', component: 'Logout', icon: '➜]', path: '/login' }
+        { name: 'Dashboard', component: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
+        { name: 'Browse Events', component: 'BrowseEvents', icon: BrowseEventsIcon, path: '/browse' },
+        { name: 'Registered Events', component: 'RegisteredEvents', icon: RegisteredEventsIcon, path: '/registered' },
+        { name: 'Event History', component: 'EventHistory', icon: EventHistoryIcon, path: '/history' },
+        { name: 'Logout', component: 'Logout', icon: LogoutIcon, path: '/login' }
       ];
     }
   };
@@ -180,7 +188,7 @@ const Home = ({ activeSection }) => {
                     className={`${isActive ? 'active' : ''} ${item.component === 'Logout' ? 'logout-item' : ''}`}
                     onClick={() => handleMenuClick(item)}
                   >
-                    <span className="icon">{item.icon}</span>
+                    <img src={item.icon} alt={`${item.name} icon`} className="icon" />
                     {item.name}
                   </li>
                 );
