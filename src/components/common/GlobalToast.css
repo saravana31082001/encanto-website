@@ -1,67 +1,77 @@
 .global-toast {
   position: fixed;
-  top: -60px; /* hidden above the viewport */
+  top: -100px; /* hidden above the viewport */
   left: 50%;
   transform: translateX(-50%);
-  min-width: 220px;
-  max-width: 360px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: #fff;
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  font-size: 13px;
-  line-height: 18px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  min-width: 300px;
+  max-width: 600px;
+  width: auto;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.43;
+  font-weight: 400;
+  letter-spacing: 0.01071em;
+  box-shadow: none;
   transition: top 240ms ease, opacity 240ms ease;
-  opacity: 0.98;
+  opacity: 0;
   z-index: 10000;
-  display: grid;
-  grid-template-columns: auto 1fr;
+  display: flex;
   align-items: center;
-  column-gap: 8px;
+  gap: 12px;
   box-sizing: border-box;
-  max-height: 56px; /* ~2 lines + padding */
-  overflow: hidden; /* prevent vertical growth */
 }
 
 .global-toast.show {
   top: 16px; /* slide in */
+  opacity: 1;
 }
 
 .global-toast.gt-success {
-  background: #16a34a; /* green-600 */
+  background-color: rgb(237, 247, 237);
+  color: rgb(30, 70, 32);
 }
 
 .global-toast.gt-error {
-  background: #dc2626; /* red-600 */
+  background-color: rgb(253, 237, 237);
+  color: rgb(95, 33, 32);
 }
 
-.global-toast__text {
-  color: #fff;
-  /* Keep messages compact: up to 2 lines with ellipsis */
+.global-toast__icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.9;
+  padding: 7px 0;
+  font-size: 22px;
+  margin-right: 0;
+}
+
+.gt-icon-svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  user-select: none;
+}
+
+.global-toast.gt-success .global-toast__icon {
+  color: rgb(46, 125, 50);
+}
+
+.global-toast.gt-error .global-toast__icon {
+  color: rgb(211, 47, 47);
+}
+
+.global-toast__message {
+  padding: 8px 0;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  /* Standard property for compatibility */
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  white-space: normal;
   word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-.global-toast__close {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  color: #fff;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  margin: 0;
-  opacity: 0.9;
 }
 
 

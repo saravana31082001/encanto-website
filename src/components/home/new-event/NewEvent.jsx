@@ -140,6 +140,39 @@ const NewEvent = () => {
       console.log('Event created successfully:', response);
       setSubmitMessage(response.message || 'Event created successfully!');
       
+      // Scroll to top of page after successful event creation
+      // Use setTimeout to ensure DOM updates before scrolling
+      setTimeout(() => {
+        try {
+          // Find the main content container that has overflow-y: auto
+          const mainContent = document.querySelector('.main-content');
+          if (mainContent) {
+            mainContent.scrollTo({
+              top: 0,
+              left: 0,
+              behavior: 'smooth'
+            });
+          } else {
+            // Fallback to window scroll if main-content not found
+            window.scrollTo({
+              top: 0,
+              left: 0,
+              behavior: 'smooth'
+            });
+          }
+        } catch (e) {
+          // Fallback for older browsers
+          const mainContent = document.querySelector('.main-content');
+          if (mainContent) {
+            mainContent.scrollTop = 0;
+          } else {
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+          }
+        }
+      }, 100);
+      
       // Reset form after successful submission
       setFormData({
         title: '',
