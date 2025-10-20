@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import './Profile.css';
 import { useApp } from '../../context/AppContext';
 import { useApiService } from '../../services/apiService';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
+import { USER_ENDPOINTS, HTTP_METHODS, API_CONFIG } from '../../constants/apiConstants';
 
 const Profile = () => {
   const [isEditNamePopupOpen, setIsEditNamePopupOpen] = useState(false);
@@ -18,8 +23,51 @@ const Profile = () => {
   const [isEditWorkPhonePopupOpen, setIsEditWorkPhonePopupOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [birthdayDate, setBirthdayDate] = useState(null);
   const { user, loading, error, updateUser } = useApp(); // Get user data from context instead of API call
-  const { updateProfile } = useApiService();
+  const { updateProfile, updateOccupation } = useApiService();
+  
+  // Import makeApiCall function for direct API calls
+  const makeApiCall = async (endpoint, method = HTTP_METHODS.GET, data = null) => {
+    try {
+      const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+      
+      const options = {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      };
+
+      const sessionKey = localStorage.getItem('session-key');
+      if (sessionKey) {
+        options.headers['session-key'] = sessionKey;
+      }
+
+      if (data && (method === HTTP_METHODS.POST || method === HTTP_METHODS.PUT || method === HTTP_METHODS.PATCH)) {
+        options.body = JSON.stringify(data);
+      }
+
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+      }
+
+      const responseText = await response.text();
+      if (responseText.trim() === '') {
+        return { success: true };
+      }
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        return { success: true, message: responseText };
+      }
+    } catch (error) {
+      console.error('API call failed:', error);
+      throw error;
+    }
+  };
 
   // Use user data from context (no additional API call needed)
   const userProfile = user;
@@ -28,34 +76,70 @@ const Profile = () => {
   const formatPhoneNumber = (phoneNumber) => {
     if (!phoneNumber) return 'Not provided';
     const num = phoneNumber.toString();
-    // Format Indian phone number: +91 98765 43210
+    // Extract only the 10-digit number for display
     if (num.length === 12 && num.startsWith('91')) {
-      return `+91 ${num.slice(2, 7)} ${num.slice(7)}`;
+      return num.slice(2); // Return only the 10-digit number
     }
-    // If it already has +91 prefix, format it nicely
+    // If it already has +91 prefix, extract the 10-digit number
     if (num.startsWith('+91') && num.length === 13) {
-      return `+91 ${num.slice(3, 8)} ${num.slice(8)}`;
+      return num.slice(3); // Return only the 10-digit number
     }
-    // Fallback for other formats
-    return `+${num}`;
+    // If it's already a 10-digit number, return as is
+    if (num.length === 10) {
+      return num;
+    }
+    // Fallback for other formats - try to extract 10 digits
+    const digits = num.replace(/\D/g, '');
+    if (digits.length >= 10) {
+      return digits.slice(-10); // Return last 10 digits
+    }
+    return num; // Return original if we can't extract 10 digits
   };
 
   // Helper function to format address
   const formatAddress = (address) => {
     if (!address) return 'Not provided';
-    return `${address.streetAddress}, ${address.city}, ${address.state} ${address.postalCode}`;
+    return `${address.streetAddress}, ${address.city}, ${address.state}, ${address.country}`;
   };
 
-  // Helper function to format work location
+  // Helper to validate email format
+  const isValidEmail = (email) => {
+    if (!email || typeof email !== 'string') return false;
+    const trimmed = email.trim();
+    // Basic, robust email pattern similar to signup validation
+    return /\S+@\S+\.\S+/.test(trimmed);
+  };
+
+  // Helper function to format work location (mirror home address format)
   const formatWorkLocation = (jobLocation) => {
     if (!jobLocation) return 'Not provided';
-    return `${jobLocation.city}, ${jobLocation.state}`;
+    const base = `${jobLocation.streetAddress || ''}${jobLocation.streetAddress ? ', ' : ''}` +
+                 `${jobLocation.city || ''}${jobLocation.city ? ', ' : ''}` +
+                 `${jobLocation.state || ''}${jobLocation.state ? ', ' : ''}` +
+                 `${jobLocation.country || ''}`.trim();
+    return base.trim() || 'Not provided';
   };
 
   // Helper function to get verification status
   const getVerificationStatus = () => {
     if (!userProfile) return '';
     return userProfile.isEmailVerified ? 'Verified' : 'Not Verified';
+  };
+
+  // Helper function to format birthday display from dd-mm-yyyy format
+  const formatBirthdayDisplay = (dateOfBirth) => {
+    if (!dateOfBirth) return 'Not provided';
+    
+    // Handle dd-mm-yyyy format from API
+    const parts = dateOfBirth.split('-');
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      const date = new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    
+    // Fallback for other formats
+    return dateOfBirth;
   };
 
   // Generic save function for profile updates
@@ -71,7 +155,9 @@ const Profile = () => {
       switch (field) {
         case 'name':
           if (!value || value.trim() === '') {
-            setSaveError('Name cannot be empty.');
+            // Do not send API call for empty value; just close the popup
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: 'Name cannot be empty' } })); } catch (_) {}
+            setIsEditNamePopupOpen(false);
             setIsSaving(false);
             return;
           }
@@ -79,7 +165,9 @@ const Profile = () => {
           break;
         case 'phone':
           if (!value || value.trim() === '') {
-            setSaveError('Phone number cannot be empty.');
+            // Do not send API call for empty value; just close the popup
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: 'Phone number cannot be empty' } })); } catch (_) {}
+            setIsEditPhonePopupOpen(false);
             setIsSaving(false);
             return;
           }
@@ -95,7 +183,9 @@ const Profile = () => {
           break;
         case 'workPhone':
           if (!value || value.trim() === '') {
-            setSaveError('Work phone number cannot be empty.');
+            // Do not send API call for empty value; just close the popup
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: 'Work phone number cannot be empty' } })); } catch (_) {}
+            setIsEditWorkPhonePopupOpen(false);
             setIsSaving(false);
             return;
           }
@@ -107,109 +197,222 @@ const Profile = () => {
             return;
           }
           // Add +91 prefix for API call
-          updateData = { 
-            occupationDetails: {
-              ...userProfile.occupationDetails,
-              workPhoneNumber: `+91${workPhoneDigits}`
-            }
-          };
+          updateData = { workPhoneNumber: `+91${workPhoneDigits}` };
           break;
         case 'gender':
           // Validate gender - don't send empty values
           if (!value || value.trim() === '') {
-            setSaveError('Please select a gender.');
+            // Do not send API call for empty value; just close the popup
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: 'Please select a gender' } })); } catch (_) {}
+            setIsEditGenderPopupOpen(false);
             setIsSaving(false);
             return;
           }
           updateData = { gender: value };
           break;
         case 'birthday':
-          updateData = { dateOfBirth: value };
+          // Convert dayjs date to dd-mm-yyyy format
+          if (value && value.isValid()) {
+            const formattedDate = value.format('DD-MM-YYYY');
+            updateData = { dateOfBirth: formattedDate };
+          } else {
+            // If cleared or invalid, do not call API; just close the popup
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: 'Please select a valid date of birth' } })); } catch (_) {}
+            setIsEditBirthdayPopupOpen(false);
+            setIsSaving(false);
+            return;
+          }
           break;
         case 'address':
-          updateData = { 
-            address: {
-              streetAddress: value.streetAddress,
-              city: value.city,
-              state: value.state,
-              postalCode: value.postalCode,
-              landmark: value.landmark
-            }
+          // Validate mandatory fields
+          if (!value.streetAddress || value.streetAddress.trim() === '') {
+            setSaveError('Street address is required.');
+            setIsSaving(false);
+            return;
+          }
+          if (!value.city || value.city.trim() === '') {
+            setSaveError('City is required.');
+            setIsSaving(false);
+            return;
+          }
+          if (!value.state || value.state.trim() === '') {
+            setSaveError('State is required.');
+            setIsSaving(false);
+            return;
+          }
+          if (!value.postalCode || value.postalCode.trim() === '') {
+            setSaveError('Postal code is required.');
+            setIsSaving(false);
+            return;
+          }
+          if (!value.country || value.country.trim() === '') {
+            setSaveError('Country is required.');
+            setIsSaving(false);
+            return;
+          }
+          
+          // Format data according to the expected request format
+          const addressUpdateData = {
+            userId: userProfile.userId || userProfile._id || userProfile.Id,
+            addressId: userProfile.address?.addressId || '', // Include if exists
+            streetAddress: value.streetAddress.trim(),
+            landmark: value.landmark?.trim() || '', // Optional field
+            city: value.city.trim(),
+            state: value.state.trim(),
+            postalCode: value.postalCode.trim(),
+            country: value.country.trim(),
+            addressType: 'Home', // Must always be Home for home address
+            updatedTimestamp: Date.now()
           };
+          
+          // Use the specific address update endpoint
+          try {
+            await makeApiCall(USER_ENDPOINTS.UPDATE_ADDRESS, HTTP_METHODS.PUT, addressUpdateData);
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'success', message: 'Home address updated successfully' } })); } catch (_) {}
+            // If successful, refresh user data from context
+            await updateUser();
+          } catch (apiError) {
+            console.warn('Address update failed:', apiError);
+            setSaveError('Address update functionality is not yet available on the server. Your changes will be lost when you refresh the page.');
+          }
           break;
         case 'designation':
-          updateData = { 
-            occupationDetails: {
-              ...userProfile.occupationDetails,
-              designation: value
-            }
-          };
+          if (!value || value.trim() === '') {
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: 'Designation cannot be empty' } })); } catch (_) {}
+            setIsEditDesignationPopupOpen(false);
+            setIsSaving(false);
+            return;
+          }
+          updateData = { designation: value };
           break;
         case 'organization':
-          updateData = { 
-            occupationDetails: {
-              ...userProfile.occupationDetails,
-              organizationName: value
-            }
-          };
+          if (!value || value.trim() === '') {
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: 'Organization cannot be empty' } })); } catch (_) {}
+            setIsEditOrganizationPopupOpen(false);
+            setIsSaving(false);
+            return;
+          }
+          updateData = { organizationName: value };
           break;
         case 'industry':
-          updateData = { 
-            occupationDetails: {
-              ...userProfile.occupationDetails,
-              industryDomain: value
-            }
-          };
+          if (!value || value.trim() === '') {
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: 'Industry domain cannot be empty' } })); } catch (_) {}
+            setIsEditIndustryPopupOpen(false);
+            setIsSaving(false);
+            return;
+          }
+          updateData = { industryDomain: value };
           break;
         case 'employmentType':
-          updateData = { 
-            occupationDetails: {
-              ...userProfile.occupationDetails,
-              employmentType: value
-            }
-          };
+          if (!value || value.trim() === '') {
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: 'Employment type cannot be empty' } })); } catch (_) {}
+            setIsEditEmploymentTypePopupOpen(false);
+            setIsSaving(false);
+            return;
+          }
+          updateData = { employmentType: value };
           break;
         case 'workLocation':
-          updateData = { 
-            occupationDetails: {
-              ...userProfile.occupationDetails,
-              jobLocation: {
-                city: value.city,
-                state: value.state
-              }
+          // Validate mandatory fields (same as home address)
+          if (!value.streetAddress || value.streetAddress.trim() === '') {
+            setSaveError('Street address is required.');
+            setIsSaving(false);
+            return;
+          }
+          if (!value.city || value.city.trim() === '') {
+            setSaveError('City is required.');
+            setIsSaving(false);
+            return;
+          }
+          if (!value.state || value.state.trim() === '') {
+            setSaveError('State is required.');
+            setIsSaving(false);
+            return;
+          }
+          if (!value.postalCode || value.postalCode.trim() === '') {
+            setSaveError('Postal code is required.');
+            setIsSaving(false);
+            return;
+          }
+          if (!value.country || value.country.trim() === '') {
+            setSaveError('Country is required.');
+            setIsSaving(false);
+            return;
+          }
+
+          updateData = {
+            jobLocation: {
+              streetAddress: value.streetAddress.trim(),
+              landmark: value.landmark?.trim() || '',
+              city: value.city.trim(),
+              state: value.state.trim(),
+              postalCode: value.postalCode.trim(),
+              country: value.country.trim()
             }
           };
           break;
         case 'workEmail':
-          updateData = { 
-            occupationDetails: {
-              ...userProfile.occupationDetails,
-              workEmail: value
-            }
-          };
+          if (!value || value.trim() === '') {
+            try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: 'Work email cannot be empty' } })); } catch (_) {}
+            setIsEditWorkEmailPopupOpen(false);
+            setIsSaving(false);
+            return;
+          }
+          if (!isValidEmail(value)) {
+            setSaveError('Please enter a valid work email address.');
+            setIsSaving(false);
+            return;
+          }
+          updateData = { workEmail: value.trim() };
           break;
         default:
           throw new Error('Unknown field type');
       }
       
-      // Try to call API to update profile
-      try {
-        const userId = userProfile.userId || userProfile._id || userProfile.Id;
-        
-        const updateDataWithUserId = {
-          ...updateData,
-          userId: userId
-        };
-        await updateProfile(updateDataWithUserId);
-        // If successful, refresh user data from context
-        await updateUser();
-      } catch (apiError) {
-        // If API call fails (404 or other error), show a message but don't throw
-        console.warn('API update failed, showing temporary message:', apiError);
-        setSaveError('Profile update functionality is not yet available on the server. Your changes will be lost when you refresh the page.');
-        
-        // For now, we'll just close the popup without saving
-        // In a real scenario, you might want to store changes locally or show a different message
+      // Try to call API to update profile or occupation
+      if (field !== 'address') {
+        try {
+          const userId = userProfile.userId || userProfile._id || userProfile.Id;
+          const occupationId = userProfile.occupationDetails?.occupationId;
+
+          if (
+            field === 'designation' ||
+            field === 'organization' ||
+            field === 'industry' ||
+            field === 'employmentType' ||
+            field === 'workLocation' ||
+            field === 'workEmail' ||
+            field === 'workPhone'
+          ) {
+            const occupationPayload = {
+              ...updateData,
+              userId,
+              occupationId,
+            };
+
+            // If work location, include addressId if exists
+            if (field === 'workLocation') {
+              const existingAddressId = userProfile.occupationDetails?.jobLocation?.addressId;
+              if (existingAddressId) {
+                occupationPayload.addressId = existingAddressId;
+              }
+            }
+
+            await updateOccupation(occupationPayload);
+          } else {
+            const updateDataWithUserId = { ...updateData, userId };
+            await updateProfile(updateDataWithUserId);
+          }
+          // If successful, refresh user data from context
+          await updateUser();
+        } catch (apiError) {
+          // If API call fails (404 or other error), show a message but don't throw
+          console.warn('API update failed, showing temporary message:', apiError);
+          setSaveError('Profile update functionality is not yet available on the server. Your changes will be lost when you refresh the page.');
+          
+          // For now, we'll just close the popup without saving
+          // In a real scenario, you might want to store changes locally or show a different message
+        }
       }
       
       // Close the popup
@@ -306,6 +509,21 @@ const Profile = () => {
         setIsEditGenderPopupOpen(true);
         break;
       case 'birthday':
+        // Initialize birthday date from user profile (dd-mm-yyyy format)
+        if (userProfile.dateOfBirth) {
+          // Parse dd-mm-yyyy format to create dayjs object
+          const parts = userProfile.dateOfBirth.split('-');
+          if (parts.length === 3) {
+            const [day, month, year] = parts;
+            // dayjs expects yyyy-mm-dd format, so we rearrange
+            const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            setBirthdayDate(dayjs(isoDate));
+          } else {
+            setBirthdayDate(null);
+          }
+        } else {
+          setBirthdayDate(null);
+        }
         setIsEditBirthdayPopupOpen(true);
         break;
       case 'phone':
@@ -349,13 +567,14 @@ const Profile = () => {
   const backgroundColour = userProfile?.backgroundColour || '#B2DFDB';
 
   return (
-    <div 
-      className="profile-container"
-      style={{
-        '--profile-foreground-color': foregroundColor,
-        '--profile-background-color': backgroundColour
-      }}
-    >
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <div 
+        className="profile-container"
+        style={{
+          '--profile-foreground-color': foregroundColor,
+          '--profile-background-color': backgroundColour
+        }}
+      >
       <div className="profile-content">
         <div className="profile-header">
           <h1>Personal info</h1>
@@ -394,7 +613,7 @@ const Profile = () => {
             <div className="profile-item" onClick={() => handleEditClick('birthday')}>
               <div className="item-left">
                 <span className="item-label">Birthday</span>
-                <span className="item-value">{userProfile.dateOfBirth ? new Date(userProfile.dateOfBirth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not provided'}</span>
+                <span className="item-value">{userProfile.dateOfBirth ? formatBirthdayDisplay(userProfile.dateOfBirth) : 'Not provided'}</span>
               </div>
               <div className="item-right">
                 <svg className="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -632,12 +851,37 @@ const Profile = () => {
               <h3>Edit Birthday</h3>
             </div>
             <div className="popup-content">
-              <label htmlFor="birthday-input" className="popup-label">Date of Birth</label>
-              <input
-                id="birthday-input"
-                type="date"
-                className="popup-input"
-                defaultValue={userProfile.dateOfBirth ? userProfile.dateOfBirth.split('T')[0] : ''}
+              <label className="popup-label">Date of Birth</label>
+              <DatePicker
+                value={birthdayDate}
+                onChange={(newValue) => setBirthdayDate(newValue)}
+                format="DD/MM/YYYY"
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    margin: "normal",
+                    sx: { 
+                      mb: 2,
+                      '& .MuiOutlinedInput-root': {
+                        height: '42px',
+                        fontFamily: 'Inter, sans-serif'
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontFamily: 'Inter, sans-serif',
+                        top: '-5px'
+                      },
+                      '& .MuiInputLabel-root.MuiInputLabel-shrink': {
+                        top: '0px'
+                      },
+                      '& .MuiFormHelperText-root': {
+                        fontFamily: 'Inter, sans-serif'
+                      }
+                    }
+                  },
+                  actionBar: {
+                    actions: ['clear', 'cancel', 'accept']
+                  }
+                }}
               />
               {saveError && (
                 <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
@@ -654,7 +898,7 @@ const Profile = () => {
               </button>
               <button 
                 className="popup-button popup-button-save"
-                onClick={() => handleSaveProfile('birthday', () => document.getElementById('birthday-input').value)}
+                onClick={() => handleSaveProfile('birthday', () => birthdayDate)}
                 disabled={isSaving}
               >
                 {isSaving ? 'Saving...' : 'Save'}
@@ -723,7 +967,7 @@ const Profile = () => {
               <h3>Edit Home Address</h3>
             </div>
             <div className="popup-content">
-              <label htmlFor="street-input" className="popup-label">Street Address</label>
+              <label htmlFor="street-input" className="popup-label">Street Address <span style={{color: 'red'}}>*</span></label>
               <input
                 id="street-input"
                 type="text"
@@ -732,7 +976,7 @@ const Profile = () => {
                 placeholder="Enter street address"
               />
               
-              <label htmlFor="city-input" className="popup-label">City</label>
+              <label htmlFor="city-input" className="popup-label">City <span style={{color: 'red'}}>*</span></label>
               <input
                 id="city-input"
                 type="text"
@@ -741,7 +985,7 @@ const Profile = () => {
                 placeholder="Enter city"
               />
               
-              <label htmlFor="state-input" className="popup-label">State</label>
+              <label htmlFor="state-input" className="popup-label">State <span style={{color: 'red'}}>*</span></label>
               <input
                 id="state-input"
                 type="text"
@@ -750,7 +994,16 @@ const Profile = () => {
                 placeholder="Enter state"
               />
               
-              <label htmlFor="postal-input" className="popup-label">Postal Code</label>
+              <label htmlFor="country-input" className="popup-label">Country <span style={{color: 'red'}}>*</span></label>
+              <input
+                id="country-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.address?.country || ''}
+                placeholder="Enter country"
+              />
+              
+              <label htmlFor="postal-input" className="popup-label">Postal Code <span style={{color: 'red'}}>*</span></label>
               <input
                 id="postal-input"
                 type="text"
@@ -786,6 +1039,7 @@ const Profile = () => {
                   streetAddress: document.getElementById('street-input').value,
                   city: document.getElementById('city-input').value,
                   state: document.getElementById('state-input').value,
+                  country: document.getElementById('country-input').value,
                   postalCode: document.getElementById('postal-input').value,
                   landmark: document.getElementById('landmark-input').value
                 }))}
@@ -979,22 +1233,58 @@ const Profile = () => {
               <h3>Edit Work Location</h3>
             </div>
             <div className="popup-content">
-              <label htmlFor="work-city-input" className="popup-label">Work City</label>
+              <label htmlFor="work-street-input" className="popup-label">Street Address <span style={{color: 'red'}}>*</span></label>
+              <input
+                id="work-street-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.jobLocation?.streetAddress || ''}
+                placeholder="Enter street address"
+              />
+
+              <label htmlFor="work-city-input" className="popup-label">City <span style={{color: 'red'}}>*</span></label>
               <input
                 id="work-city-input"
                 type="text"
                 className="popup-input"
                 defaultValue={userProfile.occupationDetails?.jobLocation?.city || ''}
-                placeholder="Enter work city"
+                placeholder="Enter city"
               />
-              
-              <label htmlFor="work-state-input" className="popup-label">Work State</label>
+
+              <label htmlFor="work-state-input" className="popup-label">State <span style={{color: 'red'}}>*</span></label>
               <input
                 id="work-state-input"
                 type="text"
                 className="popup-input"
                 defaultValue={userProfile.occupationDetails?.jobLocation?.state || ''}
-                placeholder="Enter work state"
+                placeholder="Enter state"
+              />
+
+              <label htmlFor="work-country-input" className="popup-label">Country <span style={{color: 'red'}}>*</span></label>
+              <input
+                id="work-country-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.jobLocation?.country || ''}
+                placeholder="Enter country"
+              />
+
+              <label htmlFor="work-postal-input" className="popup-label">Postal Code <span style={{color: 'red'}}>*</span></label>
+              <input
+                id="work-postal-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.jobLocation?.postalCode || ''}
+                placeholder="Enter postal code"
+              />
+
+              <label htmlFor="work-landmark-input" className="popup-label">Landmark (Optional)</label>
+              <input
+                id="work-landmark-input"
+                type="text"
+                className="popup-input"
+                defaultValue={userProfile.occupationDetails?.jobLocation?.landmark || ''}
+                placeholder="Enter nearby landmark"
               />
               {saveError && (
                 <div className="popup-error" style={{ color: 'red', marginTop: '10px', fontSize: '14px' }}>
@@ -1012,8 +1302,12 @@ const Profile = () => {
               <button 
                 className="popup-button popup-button-save"
                 onClick={() => handleSaveProfile('workLocation', () => ({
+                  streetAddress: document.getElementById('work-street-input').value,
                   city: document.getElementById('work-city-input').value,
-                  state: document.getElementById('work-state-input').value
+                  state: document.getElementById('work-state-input').value,
+                  country: document.getElementById('work-country-input').value,
+                  postalCode: document.getElementById('work-postal-input').value,
+                  landmark: document.getElementById('work-landmark-input').value
                 }))}
                 disabled={isSaving}
               >
@@ -1115,7 +1409,8 @@ const Profile = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </LocalizationProvider>
   );
 };
 

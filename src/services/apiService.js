@@ -2,31 +2,40 @@
 // Professional API service for all HTTP requests
 //Comment for updation
 
-const API_BASE_URL = 'https://encanto-webapi.azurewebsites.net';
-//const API_BASE_URL = 'https://localhost:7207';
+import {
+  API_CONFIG,
+  AUTH_ENDPOINTS,
+  USER_ENDPOINTS,
+  EVENT_ENDPOINTS,
+  APP_ENDPOINTS,
+  HTTP_STATUS,
+  HTTP_METHODS,
+  SUCCESS_MESSAGES,
+  ERROR_MESSAGES
+} from '../constants/apiConstants.js';
 
 
 // 🔧 Core API request handlers
-async function makeApiCall(endpoint, method = 'GET', data = null) {
+async function makeApiCall(endpoint, method = HTTP_METHODS.GET, data = null) {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
     
     // Setup request configuration
     const options = {
       method: method,
       headers: {
-        'Content-Type': 'application/json',
+        ...API_CONFIG.DEFAULT_HEADERS,
       }
     };
 
     // Add session key if user is authenticated
-    const sessionKey = localStorage.getItem('session-key');
+    const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
     if (sessionKey) {
       options.headers['session-key'] = sessionKey;
     }
 
     // Add request body for POST/PUT/PATCH requests
-    if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+    if (data && (method === HTTP_METHODS.POST || method === HTTP_METHODS.PUT || method === HTTP_METHODS.PATCH)) {
       options.body = JSON.stringify(data);
     }
 
@@ -39,31 +48,49 @@ async function makeApiCall(endpoint, method = 'GET', data = null) {
     // Handle session key from response (for authentication)
     const responseSessionKey = response.headers.get('session-key');
     if (responseSessionKey) {
-      localStorage.setItem('session-key', responseSessionKey);
+      localStorage.setItem(API_CONFIG.SESSION_KEY_NAME, responseSessionKey);
     }
 
     // Handle HTTP errors
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('session-key'); // Clear invalid session
+      if (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN) {
+        localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME); // Clear invalid session
       }
-      throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+      // Try to surface server-provided error text for better debugging
+      let serverMessage = '';
+      try {
+        serverMessage = await response.text();
+      } catch (_) {
+        // ignore
+      }
+      const statusLine = `${response.status} - ${response.statusText || 'Error'}`;
+      const message = serverMessage && serverMessage.trim().length > 0 ? serverMessage : statusLine;
+      const err = new Error(`${ERROR_MESSAGES.API_ERROR}: ${message}`);
+      // Emit global error toast
+      try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message } })); } catch (_) {}
+      throw err;
     }
 
     // Return parsed response, handling empty responses
     const responseText = await response.text();
     if (responseText.trim() === '') {
-      // Return success indicator for empty responses
-      return { success: true, message: 'Operation completed successfully' };
+      // Success without body (no generic toast here; higher-level callers will emit specific messages)
+      return { success: true, message: SUCCESS_MESSAGES.OPERATION_COMPLETED };
     }
     try {
-      return JSON.parse(responseText);
+      const parsed = JSON.parse(responseText);
+      // Do not emit a generic success toast here; let callers send contextual messages
+      return parsed;
     } catch (parseError) {
-      // If it's not valid JSON, return the text response
+      // If it's not valid JSON, return the text response (no generic success toast)
       return { success: true, message: responseText };
     }
   } catch (error) {
     console.error('API call failed:', error);
+    // Emit error toast if not already emitted above
+    try {
+      window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: error.message } }));
+    } catch (_) {}
     throw error;
   }
 }
@@ -71,16 +98,16 @@ async function makeApiCall(endpoint, method = 'GET', data = null) {
 
 
 // API call for creating new account 
-async function createNewAccount(endpoint, method = 'POST', data = null) {
+async function createNewAccount(endpoint, method = HTTP_METHODS.POST, data = null) {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
 
-    localStorage.removeItem('session-key'); 
+    localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME); 
 
     const options = {
       method: method,
       headers: {
-        'Content-Type': 'application/json',
+        ...API_CONFIG.DEFAULT_HEADERS,
       }
     };
 
@@ -95,7 +122,7 @@ async function createNewAccount(endpoint, method = 'POST', data = null) {
 
     const response = await fetch(url, options);
 
-    if (response.status === 200) {
+    if (response.status === HTTP_STATUS.OK) {
       // Handle successful response from .NET backend
       const result = await response.text(); // Get the string response "Profile created successfully."
       console.log('Account created successfully:', result);
@@ -104,7 +131,7 @@ async function createNewAccount(endpoint, method = 'POST', data = null) {
     } 
     else {
       // Try to extract the actual error message from the response body
-      let errorMessage = `API Error: ${response.status} - ${response.statusText}`;
+      let errorMessage = `${ERROR_MESSAGES.API_ERROR}: ${response.status} - ${response.statusText}`;
       try {
         const errorText = await response.text();
         if (errorText) {
@@ -125,14 +152,14 @@ async function createNewAccount(endpoint, method = 'POST', data = null) {
 
 
 // API call for logging in existing user
-async function loginExistingUser(endpoint, method = 'POST', data = null)  {
+async function loginExistingUser(endpoint, method = HTTP_METHODS.POST, data = null)  {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
 
     const options = {
       method: method,
       headers: {
-        'Content-Type': 'application/json',
+        ...API_CONFIG.DEFAULT_HEADERS,
       }
     };
 
@@ -145,30 +172,30 @@ async function loginExistingUser(endpoint, method = 'POST', data = null)  {
 
     const response = await fetch(url, options);
 
-    if (response.status === 200) {
+    if (response.status === HTTP_STATUS.OK) {
       // Handle successful login response from .NET backend
       const result = await response.json(); // Get the JSON response with sessionKey
       const sessionKey = result.sessionKey;
       
       // Store the session key for future API calls
-      localStorage.setItem('session-key', sessionKey);
+      localStorage.setItem(API_CONFIG.SESSION_KEY_NAME, sessionKey);
       
       console.log('User logged in successfully, session key stored');
       return { success: true, sessionKey: sessionKey };
     } 
-    else if (response.status === 400) {
+    else if (response.status === HTTP_STATUS.BAD_REQUEST) {
       // Handle BadRequest from backend (invalid credentials, etc.)
       const errorMessage = await response.text();
       console.error('Login failed with 400 error:', errorMessage);
-      throw new Error(errorMessage || 'Invalid email or password. Please try again.');
+      throw new Error(errorMessage || ERROR_MESSAGES.INVALID_CREDENTIALS);
     }
-    else if (response.status === 401) {
+    else if (response.status === HTTP_STATUS.UNAUTHORIZED) {
       // Handle Unauthorized
-      throw new Error('Invalid email or password. Please check your credentials and try again.');
+      throw new Error(ERROR_MESSAGES.INVALID_CREDENTIALS_DETAILED);
     }
     else {
       console.error('Login failed with status:', response.status, response.statusText);
-      throw new Error(`Login failed. Please try again later. (Error: ${response.status})`);
+      throw new Error(`${ERROR_MESSAGES.LOGIN_FAILED} (Error: ${response.status})`);
     }
 
   }
@@ -180,18 +207,18 @@ async function loginExistingUser(endpoint, method = 'POST', data = null)  {
 
 
 // API call for logging in existing user
-async function getProfileDetails(endpoint, method = 'GET', data = null) {
+async function getProfileDetails(endpoint, method = HTTP_METHODS.GET, data = null) {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
     const options = {
       method: method,
       headers: {
-        'Content-Type': 'application/json',
+        ...API_CONFIG.DEFAULT_HEADERS,
       }
     };
 
     // Add session key if user is authenticated
-    const sessionKey = localStorage.getItem('session-key');
+    const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
     if (sessionKey) {
       options.headers['session-key'] = sessionKey;
     }
@@ -204,8 +231,8 @@ async function getProfileDetails(endpoint, method = 'GET', data = null) {
       return await response.json();
     } 
     else {
-      localStorage.removeItem('session-key'); 
-      throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+      localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME); 
+      throw new Error(`${ERROR_MESSAGES.API_ERROR}: ${response.status} - ${response.statusText}`);
     }
   } catch (error) {
     console.error('getProfileDetails() API call failed:', error);
@@ -215,19 +242,19 @@ async function getProfileDetails(endpoint, method = 'GET', data = null) {
 
 
 // API call for creating new event
-async function createNewEvent(endpoint, method = 'POST', data = null) {
+async function createNewEvent(endpoint, method = HTTP_METHODS.POST, data = null) {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
     
     const options = {
       method: method,
       headers: {
-        'Content-Type': 'application/json',
+        ...API_CONFIG.DEFAULT_HEADERS,
       }
     };
 
     // Add session key if user is authenticated
-    const sessionKey = localStorage.getItem('session-key');
+    const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
     if (sessionKey) {
       options.headers['session-key'] = sessionKey;
     }
@@ -241,7 +268,7 @@ async function createNewEvent(endpoint, method = 'POST', data = null) {
 
     const response = await fetch(url, options);
 
-    if (response.status === 200) {
+    if (response.status === HTTP_STATUS.OK) {
       // Handle successful response from .NET backend
       const result = await response.text(); // Get the string response
       console.log('Event created successfully:', result);
@@ -250,7 +277,7 @@ async function createNewEvent(endpoint, method = 'POST', data = null) {
     } 
     else {
       // Try to extract the actual error message from the response body
-      let errorMessage = `API Error: ${response.status} - ${response.statusText}`;
+      let errorMessage = `${ERROR_MESSAGES.API_ERROR}: ${response.status} - ${response.statusText}`;
       try {
         const errorText = await response.text();
         if (errorText) {
@@ -270,18 +297,18 @@ async function createNewEvent(endpoint, method = 'POST', data = null) {
 }
 
 // API call for logging out existing user
-async function logoutExistingUser(endpoint, method = 'POST', data = null)  {
+async function logoutExistingUser(endpoint, method = HTTP_METHODS.POST, data = null)  {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
 
     const options = {
       method: method,
       headers: {
-        'Content-Type': 'application/json',
+        ...API_CONFIG.DEFAULT_HEADERS,
       }
     };
 
-    const sessionKey = localStorage.getItem('session-key');
+    const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
     if (sessionKey) {
       options.headers['session-key'] = sessionKey;
     }
@@ -290,13 +317,13 @@ async function logoutExistingUser(endpoint, method = 'POST', data = null)  {
 
     const response = await fetch(url, options);
 
-    if (response.status === 200) {
-      localStorage.removeItem('session-key'); // Clear local session
+    if (response.status === HTTP_STATUS.OK) {
+      localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME); // Clear local session
       console.log('User logged out successfully');
       return { success: true };
     } 
     else {
-      throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+      throw new Error(`${ERROR_MESSAGES.API_ERROR}: ${response.status} - ${response.statusText}`);
     }
   }
   catch (error) {
@@ -307,14 +334,14 @@ async function logoutExistingUser(endpoint, method = 'POST', data = null)  {
 
 
 
-async function testDatabaseConnection(endpoint, method = 'GET', data = null) {
+async function testDatabaseConnection(endpoint, method = HTTP_METHODS.GET, data = null) {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
 
     const options = {
       method: method,
       headers: {
-        'Content-Type': 'application/json',
+        ...API_CONFIG.DEFAULT_HEADERS,
       }
     };
 
@@ -327,7 +354,7 @@ async function testDatabaseConnection(endpoint, method = 'GET', data = null) {
       const result = await response.text();
       return { success: true, message: result };
     } else {
-      throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+      throw new Error(`${ERROR_MESSAGES.API_ERROR}: ${response.status} - ${response.statusText}`);
     }
   } catch (error) {
     console.error('testDatabaseConnection() API call failed:', error);
@@ -352,38 +379,33 @@ async function testDatabaseConnection(endpoint, method = 'GET', data = null) {
 export const auth = {
   // Authenticate user credentials
   async login(email, passwordHash) {
-    return await loginExistingUser('/auth/login', 'POST', { email, passwordHash });
+    return await loginExistingUser(AUTH_ENDPOINTS.LOGIN, HTTP_METHODS.POST, { email, passwordHash });
   },
 
   // Register new user account
   async register(userData) {
-    return await createNewAccount('/auth/signup', 'POST', userData);
+    return await createNewAccount(AUTH_ENDPOINTS.SIGNUP, HTTP_METHODS.POST, userData);
   },
 
   // End user session
   async logout() {
-    const result = await logoutExistingUser('/auth/logout', 'POST');
-    // Note: localStorage.removeItem('session-key') is already called in logoutExistingUser
+    const result = await logoutExistingUser(AUTH_ENDPOINTS.LOGOUT, HTTP_METHODS.POST);
+    // Note: localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME) is already called in logoutExistingUser
     // and will be called again in AppContext.logout, so we don't need to clear here
     return result;
   },
 
   // Check authentication status
   isAuthenticated() {
-    return !!localStorage.getItem('session-key');
+    return !!localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
   }
 };
 
 // 👤 USER MANAGEMENT MODULE
 export const user = {
-  // Retrieve user profile information
-  async getProfile() {
-    return await makeApiCall('/user/profile');
-  },
-  
   // Get comprehensive user details
   async getDetails() {
-    return await getProfileDetails('/profileinfo');
+    return await getProfileDetails(USER_ENDPOINTS.PROFILE_INFO);
   },
 
   // Update user profile information
@@ -396,7 +418,9 @@ export const user = {
         gender: profileData.gender,
         updatedTimestamp: Date.now()
       };
-      return await makeApiCall('/update-user-gender', 'PUT', genderUpdateData);
+      const res = await makeApiCall(USER_ENDPOINTS.UPDATE_GENDER, HTTP_METHODS.PUT, genderUpdateData);
+      try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'success', message: 'Gender updated successfully' } })); } catch (_) {}
+      return res;
     }
     if (profileData.phoneNumber !== undefined) {
       // Format data according to UserPhnUpdateRequest
@@ -405,7 +429,9 @@ export const user = {
         phoneNumber: profileData.phoneNumber,
         updatedTimestamp: Date.now()
       };
-      return await makeApiCall('/update-user-phone', 'PUT', phoneUpdateData);
+      const res = await makeApiCall(USER_ENDPOINTS.UPDATE_PHONE, HTTP_METHODS.PUT, phoneUpdateData);
+      try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'success', message: 'Phone number updated successfully' } })); } catch (_) {}
+      return res;
     }
     if (profileData.name !== undefined) {
       // Format data according to UserNameUpdateRequest
@@ -414,11 +440,89 @@ export const user = {
         name: profileData.name,
         updatedTimestamp: Date.now()
       };
-      return await makeApiCall('/update-user-name', 'PUT', nameUpdateData);
+      const res = await makeApiCall(USER_ENDPOINTS.UPDATE_NAME, HTTP_METHODS.PUT, nameUpdateData);
+      try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'success', message: 'Name updated successfully' } })); } catch (_) {}
+      return res;
     }
-    // For other profile updates, we'll need to implement specific endpoints
-    // For now, fall back to the original endpoint
-    return await makeApiCall('/user/profile', 'PUT', profileData);
+    if (profileData.dateOfBirth !== undefined) {
+      // Format data according to birthday update request
+      const birthdayUpdateData = {
+        userId: profileData.userId || '',
+        dateOfBirth: profileData.dateOfBirth, // Should be in dd-mm-yyyy format
+        updatedTimestamp: Date.now()
+      };
+      const res = await makeApiCall(USER_ENDPOINTS.UPDATE_BIRTHDAY, HTTP_METHODS.PUT, birthdayUpdateData);
+      try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'success', message: 'Birthday updated successfully' } })); } catch (_) {}
+      return res;
+    }
+    // For other profile updates, no generic endpoint is available anymore
+    // Return a clear error to avoid calling deprecated /user/profile
+    throw new Error('Unsupported profile update field. No generic profile endpoint available.');
+  },
+
+  // Update occupation/work information (selective payloads)
+  async updateOccupation(occupationUpdate) {
+    // Always attach required defaults
+    const payload = {
+      userId: occupationUpdate.userId || '',
+      updatedTimestamp: Date.now()
+    };
+
+    // Include occupationId if provided
+    if (occupationUpdate.occupationId) {
+      payload.occupationId = occupationUpdate.occupationId;
+    }
+
+    // Work location special-case: requires full jobLocation object and addressType 'Work'
+    if (occupationUpdate.jobLocation) {
+      if (occupationUpdate.addressId) {
+        payload.addressId = occupationUpdate.addressId;
+      }
+
+      payload.jobLocation = {
+        userId: payload.userId,
+        addressId: occupationUpdate.addressId || occupationUpdate.jobLocation.addressId || '',
+        streetAddress: occupationUpdate.jobLocation.streetAddress,
+        landmark: occupationUpdate.jobLocation.landmark || '',
+        city: occupationUpdate.jobLocation.city,
+        state: occupationUpdate.jobLocation.state,
+        postalCode: occupationUpdate.jobLocation.postalCode,
+        country: occupationUpdate.jobLocation.country,
+        addressType: 'Work',
+        updatedTimestamp: payload.updatedTimestamp
+      };
+    }
+
+    // For scalar fields, include only the one that is present
+    const scalarFields = [
+      'designation',
+      'industryDomain',
+      'organizationName',
+      'employmentType',
+      'workEmail',
+      'workPhoneNumber'
+    ];
+    for (const key of scalarFields) {
+      if (occupationUpdate[key] !== undefined && occupationUpdate[key] !== null) {
+        payload[key] = occupationUpdate[key];
+        break; // only one field at a time
+      }
+    }
+
+    const result = await makeApiCall(USER_ENDPOINTS.UPDATE_OCCUPATION, HTTP_METHODS.PUT, payload);
+    // Emit contextual success messages for occupation updates
+    try {
+      let message = 'Updated successfully';
+      if (payload.jobLocation) message = 'Work location updated successfully';
+      else if (payload.designation) message = 'Designation updated successfully';
+      else if (payload.organizationName) message = 'Organization updated successfully';
+      else if (payload.industryDomain) message = 'Industry domain updated successfully';
+      else if (payload.employmentType) message = 'Employment type updated successfully';
+      else if (payload.workEmail) message = 'Work email updated successfully';
+      else if (payload.workPhoneNumber) message = 'Work phone number updated successfully';
+      window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'success', message } }));
+    } catch (_) {}
+    return result;
   }
 };
 
@@ -426,27 +530,27 @@ export const user = {
 export const events = {
   // Retrieve all available events
   async getAll() {
-    return await makeApiCall('/events');
+    return await makeApiCall(EVENT_ENDPOINTS.ALL_EVENTS);
   },
 
   // Get upcoming events for browsing
   async getBrowseUpcoming() {
-    return await makeApiCall('/events/browse-upcoming');
+    return await makeApiCall(EVENT_ENDPOINTS.BROWSE_UPCOMING);
   },
 
   // Get specific event details
   async getById(eventId) {
-    return await makeApiCall(`/events/${eventId}`);
+    return await makeApiCall(`${EVENT_ENDPOINTS.EVENT_BY_ID}/${eventId}`);
   },
 
   // Get user's registered events
   async getUserEvents() {
-    return await makeApiCall('/user/events');
+    return await makeApiCall(USER_ENDPOINTS.USER_EVENTS);
   },
 
   // Create a new event
   async create(eventData) {
-    return await createNewEvent('/events/new', 'POST', eventData);
+    return await createNewEvent(EVENT_ENDPOINTS.NEW_EVENT, HTTP_METHODS.POST, eventData);
   },
 
 };
@@ -455,7 +559,7 @@ export const events = {
 export const app = {
   // Test database connectivity
   async testDatabase() {
-    return await testDatabaseConnection('/test-db-connection');
+    return await testDatabaseConnection(APP_ENDPOINTS.TEST_DB_CONNECTION);
   },
 };
 
@@ -470,9 +574,9 @@ export const useApiService = () => {
     isAuthenticated: auth.isAuthenticated,
 
     // User management methods
-    getUserProfile: user.getProfile,
     getUserDetails: user.getDetails,
     updateProfile: user.updateProfile,
+    updateOccupation: user.updateOccupation,
 
     // Event management methods
     getAllEvents: events.getAll,

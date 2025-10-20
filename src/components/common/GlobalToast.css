@@ -1,0 +1,67 @@
+.global-toast {
+  position: fixed;
+  top: -60px; /* hidden above the viewport */
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  max-width: 360px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #fff;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  transition: top 240ms ease, opacity 240ms ease;
+  opacity: 0.98;
+  z-index: 10000;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  box-sizing: border-box;
+  max-height: 56px; /* ~2 lines + padding */
+  overflow: hidden; /* prevent vertical growth */
+}
+
+.global-toast.show {
+  top: 16px; /* slide in */
+}
+
+.global-toast.gt-success {
+  background: #16a34a; /* green-600 */
+}
+
+.global-toast.gt-error {
+  background: #dc2626; /* red-600 */
+}
+
+.global-toast__text {
+  color: #fff;
+  /* Keep messages compact: up to 2 lines with ellipsis */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  /* Standard property for compatibility */
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.global-toast__close {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  opacity: 0.9;
+}
+
+
