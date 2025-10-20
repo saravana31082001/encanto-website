@@ -5,6 +5,7 @@ import Signup from './components/signup/Signup';
 import Home from './components/home/Home';
 import { AppProvider, useApp } from './context/AppContext';
 import LoadingSpinner from './components/common/LoadingSpinner';
+import GlobalToast from './components/common/GlobalToast';
 import './App.css'
 
 // App content component that uses the context
@@ -30,6 +31,7 @@ function AppContent() {
   return (
     <Router>
       <div className="App">
+        <GlobalToast />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
