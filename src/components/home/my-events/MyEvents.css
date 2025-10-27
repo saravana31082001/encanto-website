@@ -849,6 +849,149 @@
   word-break: break-word;
 }
 
+/* Edit Form Styles */
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.edit-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edit-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.edit-form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.edit-form-input,
+.edit-form-textarea {
+  padding: 0.75rem;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #111827;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.edit-form-input:focus,
+.edit-form-textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.edit-form-input.error,
+.edit-form-textarea.error {
+  border-color: #dc2626;
+}
+
+.edit-form-input.error:focus,
+.edit-form-textarea.error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.edit-form-textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.edit-form-error {
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.edit-form-helper {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 400;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Material UI DateTimePicker Styling */
+.edit-form-datepicker .MuiOutlinedInput-root {
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.edit-form-datepicker .MuiOutlinedInput-root fieldset {
+  border-width: 2px;
+  border-color: #d1d5db;
+  transition: all 0.2s ease;
+}
+
+.edit-form-datepicker .MuiOutlinedInput-root:hover fieldset {
+  border-color: #9ca3af;
+}
+
+.edit-form-datepicker .MuiOutlinedInput-root.Mui-focused fieldset {
+  border-color: #2563eb;
+  border-width: 2px;
+}
+
+.edit-form-datepicker .MuiOutlinedInput-input {
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  color: #111827;
+}
+
+/* DateTimePicker error state */
+.edit-form-datepicker.error .MuiOutlinedInput-root fieldset {
+  border-color: #dc2626;
+}
+
+.edit-form-datepicker.error .MuiOutlinedInput-root:hover fieldset,
+.edit-form-datepicker.error .MuiOutlinedInput-root.Mui-focused fieldset {
+  border-color: #dc2626;
+}
+
+/* Ensure MUI DateTimePicker poppers appear above modal */
+.MuiPickersPopper-root {
+  z-index: 2100 !important;
+}
+
+.MuiDialog-root {
+  z-index: 2100 !important;
+}
+
+.edit-form-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.edit-form-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
 /* Modal Footer */
 .details-modal-footer {
   display: flex;
@@ -872,9 +1015,51 @@
   transition: all 0.2s ease;
 }
 
-.details-modal-cancel:hover {
+.details-modal-cancel:hover:not(:disabled) {
   background: #f9fafb;
   border-color: #9ca3af;
+}
+
+.details-modal-cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.details-modal-edit {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.details-modal-edit:hover {
+  background: #1d4ed8;
+}
+
+.details-modal-save {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.details-modal-save:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.details-modal-save:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .details-modal-mark-complete {
@@ -968,6 +1153,10 @@
   .details-participants-grid {
     grid-template-columns: 1fr;
   }
+
+  .edit-form-row {
+    grid-template-columns: 1fr;
+  }
   
   .details-modal-footer {
     padding: 1rem 1.5rem;
@@ -976,6 +1165,8 @@
   }
   
   .details-modal-cancel,
+  .details-modal-edit,
+  .details-modal-save,
   .details-modal-mark-complete {
     width: 100%;
     justify-content: center;
@@ -1031,12 +1222,18 @@
     min-height: auto;
   }
   
+  .edit-form-row {
+    grid-template-columns: 1fr;
+  }
+
   .details-modal-footer {
     padding: 0.875rem 1rem;
     flex-shrink: 0;
   }
   
   .details-modal-cancel,
+  .details-modal-edit,
+  .details-modal-save,
   .details-modal-mark-complete {
     width: 100%;
     justify-content: center;

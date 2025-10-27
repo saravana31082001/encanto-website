@@ -328,13 +328,26 @@ const BrowseEvents = () => {
     const isPrivate = event.IsPrivate || event.isPrivate || event.private;
     const registrationStatus = getUserRegistrationStatus(event);
     
-    // For private events, check if declined (status = -1)
-    if (isPrivate && isRegistered && registrationStatus === -1) {
-      return "Declined";
+    // If user is already registered, show their registration status
+    if (isRegistered) {
+      if (registrationStatus === -1) {
+        return "Declined";
+      } else if (registrationStatus === 1) {
+        return "Joined";
+      } else if (registrationStatus === 0) {
+        return "Requested";
+      }
     }
     
-    if (isRegistered) {
-      return isPrivate ? "Requested" : "Joined";
+    // Only check if accepting participants when user hasn't registered yet
+    const isAcceptingParticipants = event.is_accepting_participants !== undefined 
+      ? event.is_accepting_participants 
+      : event.IsAcceptingParticipants !== undefined 
+        ? event.IsAcceptingParticipants 
+        : true; // default to true if not specified
+    
+    if (!isAcceptingParticipants) {
+      return "Closed";
     }
     
     return isPrivate ? "Request" : "Join";
@@ -502,35 +515,46 @@ const BrowseEvents = () => {
                      <button className="view-details-button" onClick={() => handleViewDetails(event)}>
                        View Details
                      </button>
-                     {(() => {
-                       const registered = isUserRegistered(event);
-                       const declined = isRegistrationDeclined(event);
-                       const eventId = event.eventId || event.EventId || event.id || event._id;
-                       const isApplying = applyingEventId === eventId;
-                       const buttonText = isApplying ? "Applying..." : getButtonText(event, registered);
-                       
-                       // Determine status class based on button text
-                       let statusClass = '';
-                       if (!isApplying) {
-                         if (buttonText === 'Joined') {
-                           statusClass = 'joined';
-                         } else if (buttonText === 'Requested') {
-                           statusClass = 'requested';
-                         } else if (buttonText === 'Declined') {
-                           statusClass = 'declined';
-                         }
-                       }
-                       
-                       return (
-                         <button 
-                           className={`apply-button ${registered ? 'registered' : ''} ${statusClass}`}
-                           onClick={() => handleApplyToEvent(event)}
-                           disabled={registered || isApplying}
-                         >
-                           {buttonText}
-                         </button>
-                       );
-                     })()}
+                    {(() => {
+                      const registered = isUserRegistered(event);
+                      const declined = isRegistrationDeclined(event);
+                      const eventId = event.eventId || event.EventId || event.id || event._id;
+                      const isApplying = applyingEventId === eventId;
+                      const buttonText = isApplying ? "Applying..." : getButtonText(event, registered);
+                      
+                      // Only check if event is accepting participants when user is not registered
+                      const isAcceptingParticipants = registered ? true : (
+                        event.is_accepting_participants !== undefined 
+                          ? event.is_accepting_participants 
+                          : event.IsAcceptingParticipants !== undefined 
+                            ? event.IsAcceptingParticipants 
+                            : true
+                      );
+                      
+                      // Determine status class based on button text
+                      let statusClass = '';
+                      if (!isApplying) {
+                        if (buttonText === 'Joined') {
+                          statusClass = 'joined';
+                        } else if (buttonText === 'Requested') {
+                          statusClass = 'requested';
+                        } else if (buttonText === 'Declined') {
+                          statusClass = 'declined';
+                        } else if (buttonText === 'Closed') {
+                          statusClass = 'closed';
+                        }
+                      }
+                      
+                      return (
+                        <button 
+                          className={`apply-button ${registered ? 'registered' : ''} ${statusClass}`}
+                          onClick={() => handleApplyToEvent(event)}
+                          disabled={registered || isApplying || !isAcceptingParticipants}
+                        >
+                          {buttonText}
+                        </button>
+                      );
+                    })()}
                    </div>
                  </div>
               </div>
@@ -554,7 +578,19 @@ const BrowseEvents = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="popover-header">
-              <h3>Participants ({selectedEvent.TotalRegisteredParticipants || selectedEvent.totalRegisteredParticipants || (selectedEvent.Participants || selectedEvent.participants || []).length})</h3>
+              <h3>Participants ({(() => {
+                // Use totalRegisteredParticipants if available, otherwise filter and count accepted participants
+                const total = selectedEvent.TotalRegisteredParticipants || selectedEvent.totalRegisteredParticipants;
+                if (total !== undefined && total !== null) {
+                  return total;
+                }
+                // Fallback: count only accepted participants (status === 1)
+                const participants = selectedEvent.Participants || selectedEvent.participants || [];
+                return participants.filter(p => {
+                  const status = p.registrationStatus !== undefined ? p.registrationStatus : p.RegistrationStatus;
+                  return status === 1;
+                }).length;
+              })()})</h3>
               <button className="popover-close" onClick={handleClosePopover}>×</button>
             </div>
             <div className="participants-list">
@@ -649,7 +685,19 @@ const BrowseEvents = () => {
                       <div className="details-info-item">
                         <span className="details-info-label">Total Participants</span>
                         <span className="details-info-value">
-                          {detailsModalEvent.totalRegisteredParticipants || detailsModalEvent.TotalRegisteredParticipants || (detailsModalEvent.Participants || detailsModalEvent.participants || []).length}
+                          {(() => {
+                            // Use totalRegisteredParticipants if available, otherwise filter and count accepted participants
+                            const total = detailsModalEvent.totalRegisteredParticipants || detailsModalEvent.TotalRegisteredParticipants;
+                            if (total !== undefined && total !== null) {
+                              return total;
+                            }
+                            // Fallback: count only accepted participants (status === 1)
+                            const participants = detailsModalEvent.Participants || detailsModalEvent.participants || [];
+                            return participants.filter(p => {
+                              const status = p.registrationStatus !== undefined ? p.registrationStatus : p.RegistrationStatus;
+                              return status === 1;
+                            }).length;
+                          })()}
                         </span>
                       </div>
                       {detailsModalEvent.location || detailsModalEvent.Location && (
@@ -664,32 +712,40 @@ const BrowseEvents = () => {
                   </div>
                 </div>
 
-                {/* Meeting Link - Only show if user is registered and link exists */}
-                {isUserRegistered(detailsModalEvent) && 
-                 (() => {
-                   const meetingLink = detailsModalEvent.MeetingLink || detailsModalEvent.meetingLink || detailsModalEvent.meeting_link;
-                   return meetingLink && meetingLink.trim() !== '' && (
-                     <div className="details-section">
-                       <h3 className="details-section-title">Meeting Link</h3>
-                       <div className="details-section-content">
-                         <a 
-                           href={meetingLink}
-                           target="_blank" 
-                           rel="noopener noreferrer"
-                           className="meeting-link"
-                           style={{
-                             color: '#0078d4',
-                             textDecoration: 'none',
-                             wordBreak: 'break-all',
-                             fontSize: '14px'
-                           }}
-                         >
-                           {meetingLink}
-                         </a>
-                       </div>
-                     </div>
-                   );
-                 })()}
+                {/* Meeting Link - Show for registered users (status = 1), display NA if link is empty */}
+                {(() => {
+                  const registrationStatus = getUserRegistrationStatus(detailsModalEvent);
+                  if (registrationStatus === 1) {
+                    const meetingLink = detailsModalEvent.MeetingLink || detailsModalEvent.meetingLink || detailsModalEvent.meeting_link;
+                    const hasValidLink = meetingLink && meetingLink.trim() !== '';
+                    return (
+                      <div className="details-section">
+                        <h3 className="details-section-title">Meeting Link</h3>
+                        <div className="details-section-content">
+                          {hasValidLink ? (
+                            <a 
+                              href={meetingLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="meeting-link"
+                              style={{
+                                color: '#0078d4',
+                                textDecoration: 'none',
+                                wordBreak: 'break-all',
+                                fontSize: '14px'
+                              }}
+                            >
+                              {meetingLink}
+                            </a>
+                          ) : (
+                            <span style={{ color: '#666', fontSize: '14px' }}>NA</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 {!(detailsModalEvent.IsPrivate || detailsModalEvent.isPrivate || detailsModalEvent.private) && 
                  (() => {
@@ -854,29 +910,53 @@ const BrowseEvents = () => {
               </button>
               {detailsModalEvent && (() => {
                 const registered = isUserRegistered(detailsModalEvent);
-                const declined = isRegistrationDeclined(detailsModalEvent);
                 const eventId = detailsModalEvent.eventId || detailsModalEvent.EventId || detailsModalEvent.id || detailsModalEvent._id;
                 const isApplying = applyingEventId === eventId;
                 const isPrivate = detailsModalEvent.IsPrivate || detailsModalEvent.isPrivate || detailsModalEvent.private;
+                const registrationStatus = getUserRegistrationStatus(detailsModalEvent);
                 
                 let buttonText;
+                let isAcceptingParticipants = true;
+                
                 if (isApplying) {
                   buttonText = "Applying...";
                 } else if (registered) {
-                  buttonText = declined ? "Declined" : (isPrivate ? "Requested" : "Joined");
+                  // If user is already registered, show their registration status
+                  if (registrationStatus === -1) {
+                    buttonText = "Declined";
+                  } else if (registrationStatus === 1) {
+                    buttonText = "Joined";
+                  } else if (registrationStatus === 0) {
+                    buttonText = "Requested";
+                  } else {
+                    buttonText = isPrivate ? "Requested" : "Joined";
+                  }
                 } else {
-                  buttonText = isPrivate ? "Request to Join" : "Join Event";
+                  // Only check if accepting participants when user hasn't registered yet
+                  isAcceptingParticipants = detailsModalEvent.is_accepting_participants !== undefined 
+                    ? detailsModalEvent.is_accepting_participants 
+                    : detailsModalEvent.IsAcceptingParticipants !== undefined 
+                      ? detailsModalEvent.IsAcceptingParticipants 
+                      : true;
+                  
+                  if (!isAcceptingParticipants) {
+                    buttonText = "Closed";
+                  } else {
+                    buttonText = isPrivate ? "Request to Join" : "Join Event";
+                  }
                 }
                 
-                // Determine status class based on button text (only for registered states)
+                // Determine status class based on button text
                 let statusClass = '';
-                if (!isApplying && registered) {
+                if (!isApplying) {
                   if (buttonText === 'Joined') {
                     statusClass = 'joined';
                   } else if (buttonText === 'Requested') {
                     statusClass = 'requested';
                   } else if (buttonText === 'Declined') {
                     statusClass = 'declined';
+                  } else if (buttonText === 'Closed') {
+                    statusClass = 'closed';
                   }
                 }
                 
@@ -888,7 +968,7 @@ const BrowseEvents = () => {
                         handleApplyToEvent(detailsModalEvent);
                       }
                     }}
-                    disabled={registered || isApplying}
+                    disabled={registered || isApplying || !isAcceptingParticipants}
                   >
                     {buttonText}
                   </button>

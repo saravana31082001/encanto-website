@@ -10,7 +10,7 @@ import './App.css'
 
 // App content component that uses the context
 function AppContent() {
-  const { appInitialized, loading, error, isAuthenticated } = useApp();
+  const { appInitialized, loading, error, isAuthenticated, user } = useApp();
 
   // Show loading spinner while app is initializing
   if (!appInitialized || loading) {
@@ -58,6 +58,10 @@ function AppContent() {
           />
           {/* Host-specific routes */}
           <Route 
+            path="/admin" 
+            element={isAuthenticated ? <Home activeSection="AdminPanel" /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
             path="/create" 
             element={isAuthenticated ? <Home activeSection="NewEvent" /> : <Navigate to="/login" replace />} 
           />
@@ -69,11 +73,14 @@ function AppContent() {
             path="/manage" 
             element={isAuthenticated ? <Home activeSection="ManageRequests" /> : <Navigate to="/login" replace />} 
           />
-          <Route path="/home" element={<Navigate to="/dashboard" replace />} />
-          {/* Default route - redirect based on authentication */}
+          <Route 
+            path="/home" 
+            element={<Navigate to={isAuthenticated && (user?.profileType?.toLowerCase() === 'host' || user?.isHost) ? "/admin" : "/dashboard"} replace />} 
+          />
+          {/* Default route - redirect based on authentication and user type */}
           <Route 
             path="/" 
-            element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} 
+            element={<Navigate to={isAuthenticated ? ((user?.profileType?.toLowerCase() === 'host' || user?.isHost) ? "/admin" : "/dashboard") : "/login"} replace />} 
           />
         </Routes>
       </div>

@@ -55,15 +55,18 @@ const RegisteredEvents = () => {
       ? participant.registrationStatus 
       : participant.RegistrationStatus;
 
+    // Convert to number to handle both string and number types
+    const statusNum = Number(registrationStatus);
+
     // Map numeric status to string:
     // 0 = Requested (Pending)
     // 1 = Joined (Accepted/Upcoming)
     // -1 = Declined
-    if (registrationStatus === 1) {
+    if (statusNum === 1) {
       return "Joined";
-    } else if (registrationStatus === 0) {
+    } else if (statusNum === 0) {
       return "Requested";
-    } else if (registrationStatus === -1) {
+    } else if (statusNum === -1) {
       return "Declined";
     }
 
@@ -242,7 +245,13 @@ const RegisteredEvents = () => {
       (p.participantId === userId) || (p.ParticipantId === userId)
     );
 
-    return participant ? (participant.registrationStatus !== undefined ? participant.registrationStatus : participant.RegistrationStatus) : null;
+    if (!participant) {
+      return null;
+    }
+
+    const registrationStatus = participant.registrationStatus !== undefined ? participant.registrationStatus : participant.RegistrationStatus;
+    // Convert to number to handle both string and number types
+    return registrationStatus !== undefined && registrationStatus !== null ? Number(registrationStatus) : null;
   };
 
   // Get button text based on event type and registration status
@@ -250,12 +259,14 @@ const RegisteredEvents = () => {
     const isPrivate = event.IsPrivate || event.isPrivate || event.private;
     const registrationStatus = getUserRegistrationStatus(event);
     
-    if (isPrivate && isRegistered && registrationStatus === -1) {
-      return "Declined";
-    }
-    
     if (isRegistered) {
-      return isPrivate ? "Requested" : "Joined";
+      if (registrationStatus === -1) {
+        return "Declined";
+      } else if (registrationStatus === 1) {
+        return "Joined";
+      } else if (registrationStatus === 0) {
+        return "Requested";
+      }
     }
     
     return isPrivate ? "Request" : "Join";
@@ -487,7 +498,19 @@ const RegisteredEvents = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="popover-header">
-              <h3>Participants ({selectedEvent.TotalRegisteredParticipants || selectedEvent.totalRegisteredParticipants || (selectedEvent.Participants || selectedEvent.participants || []).length})</h3>
+              <h3>Participants ({(() => {
+                // Use totalRegisteredParticipants if available, otherwise filter and count accepted participants
+                const total = selectedEvent.TotalRegisteredParticipants || selectedEvent.totalRegisteredParticipants;
+                if (total !== undefined && total !== null) {
+                  return total;
+                }
+                // Fallback: count only accepted participants (status === 1)
+                const participants = selectedEvent.Participants || selectedEvent.participants || [];
+                return participants.filter(p => {
+                  const status = p.registrationStatus !== undefined ? p.registrationStatus : p.RegistrationStatus;
+                  return status === 1;
+                }).length;
+              })()})</h3>
               <button className="popover-close" onClick={handleClosePopover}>×</button>
             </div>
             <div className="participants-list">
@@ -582,7 +605,19 @@ const RegisteredEvents = () => {
                       <div className="details-info-item">
                         <span className="details-info-label">Total Participants</span>
                         <span className="details-info-value">
-                          {detailsModalEvent.totalRegisteredParticipants || detailsModalEvent.TotalRegisteredParticipants || (detailsModalEvent.Participants || detailsModalEvent.participants || []).length}
+                          {(() => {
+                            // Use totalRegisteredParticipants if available, otherwise filter and count accepted participants
+                            const total = detailsModalEvent.totalRegisteredParticipants || detailsModalEvent.TotalRegisteredParticipants;
+                            if (total !== undefined && total !== null) {
+                              return total;
+                            }
+                            // Fallback: count only accepted participants (status === 1)
+                            const participants = detailsModalEvent.Participants || detailsModalEvent.participants || [];
+                            return participants.filter(p => {
+                              const status = p.registrationStatus !== undefined ? p.registrationStatus : p.RegistrationStatus;
+                              return status === 1;
+                            }).length;
+                          })()}
                         </span>
                       </div>
                       {detailsModalEvent.location || detailsModalEvent.Location && (
@@ -597,75 +632,92 @@ const RegisteredEvents = () => {
                   </div>
                 </div>
 
-                {/* Meeting Link - Only show if user is registered and link exists */}
-                {isUserRegistered(detailsModalEvent) && 
-                 (() => {
-                   const meetingLink = detailsModalEvent.MeetingLink || detailsModalEvent.meetingLink || detailsModalEvent.meeting_link;
-                   return meetingLink && meetingLink.trim() !== '' && (
-                     <div className="details-section">
-                       <h3 className="details-section-title">Meeting Link</h3>
-                       <div className="details-section-content">
-                         <a 
-                           href={meetingLink} 
-                           target="_blank" 
-                           rel="noopener noreferrer"
-                           className="meeting-link"
-                           style={{
-                             color: '#0078d4',
-                             textDecoration: 'none',
-                             wordBreak: 'break-all',
-                             fontSize: '14px'
-                           }}
-                         >
-                           {meetingLink}
-                         </a>
-                       </div>
-                     </div>
-                   );
-                 })()}
+                {/* Meeting Link - Show for registered users (status = 1), display NA if link is empty */}
+                {(() => {
+                  const registrationStatus = getUserRegistrationStatus(detailsModalEvent);
+                  if (registrationStatus === 1) {
+                    const meetingLink = detailsModalEvent.MeetingLink || detailsModalEvent.meetingLink || detailsModalEvent.meeting_link;
+                    const hasValidLink = meetingLink && meetingLink.trim() !== '';
+                    return (
+                      <div className="details-section">
+                        <h3 className="details-section-title">Meeting Link</h3>
+                        <div className="details-section-content">
+                          {hasValidLink ? (
+                            <a 
+                              href={meetingLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="meeting-link"
+                              style={{
+                                color: '#0078d4',
+                                textDecoration: 'none',
+                                wordBreak: 'break-all',
+                                fontSize: '14px'
+                              }}
+                            >
+                              {meetingLink}
+                            </a>
+                          ) : (
+                            <span style={{ color: '#666', fontSize: '14px' }}>NA</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
-                {!(detailsModalEvent.IsPrivate || detailsModalEvent.isPrivate || detailsModalEvent.private) && 
-                 (() => {
-                   const detailsParticipants = detailsModalEvent.Participants || detailsModalEvent.participants || [];
-                   const acceptedDetailsParticipants = detailsParticipants.filter(p => {
-                     const status = p.registrationStatus !== undefined ? p.registrationStatus : p.RegistrationStatus;
-                     return status === 1;
-                   });
-                   return acceptedDetailsParticipants.length > 0 && (
-                     <div className="details-section">
-                       <h3 className="details-section-title">Participants</h3>
-                       <div className="details-section-content">
-                         <div className="details-participants-grid">
-                           {acceptedDetailsParticipants.map((participant) => {
-                             const participantId = participant.ParticipantId || participant.participantId || participant.id;
-                             const participantName = participant.ParticipantName || participant.participantName || participant.name || "Unknown Participant";
-                             const bgColor = participant.BackgroundColour || participant.Background || participant.backgroundColour || participant.background || "#9c27b0";
-                             const fgColor = participant.ForegroundColour || participant.Foreground || participant.foregroundColour || participant.foreground || "#fff";
-                             
-                             return (
-                               <div key={participantId} className="details-participant-card">
-                                 <span
-                                   className="details-participant-avatar"
-                                   style={{
-                                     backgroundColor: bgColor,
-                                     color: fgColor,
-                                   }}
-                                 >
-                                   {participantName ? participantName[0] : "?"}
-                                 </span>
-                                 <span className="details-participant-name">
-                                   {participantName && participantName.length > 15 
-                                     ? participantName.substring(0, 15) + "..."
-                                     : participantName}
-                                 </span>
-                               </div>
-                             );
-                           })}
-                         </div>
-                       </div>
-                     </div>
-                   );
-                 })()}
+                {/* Participants List - Show for both public events and private events where user is accepted (status = 1) */}
+                {(() => {
+                  const isPrivate = detailsModalEvent.IsPrivate || detailsModalEvent.isPrivate || detailsModalEvent.private;
+                  const registrationStatus = getUserRegistrationStatus(detailsModalEvent);
+                  const shouldShowParticipants = !isPrivate || registrationStatus === 1;
+                  
+                  if (!shouldShowParticipants) {
+                    return null;
+                  }
+                  
+                  const detailsParticipants = detailsModalEvent.Participants || detailsModalEvent.participants || [];
+                  const acceptedDetailsParticipants = detailsParticipants.filter(p => {
+                    const status = p.registrationStatus !== undefined ? p.registrationStatus : p.RegistrationStatus;
+                    return status === 1;
+                  });
+                  
+                  return acceptedDetailsParticipants.length > 0 && (
+                    <div className="details-section">
+                      <h3 className="details-section-title">Participants</h3>
+                      <div className="details-section-content">
+                        <div className="details-participants-grid">
+                          {acceptedDetailsParticipants.map((participant) => {
+                            const participantId = participant.ParticipantId || participant.participantId || participant.id;
+                            const participantName = participant.ParticipantName || participant.participantName || participant.name || "Unknown Participant";
+                            const bgColor = participant.BackgroundColour || participant.Background || participant.backgroundColour || participant.background || "#9c27b0";
+                            const fgColor = participant.ForegroundColour || participant.Foreground || participant.foregroundColour || participant.foreground || "#fff";
+                            
+                            return (
+                              <div key={participantId} className="details-participant-card">
+                                <span
+                                  className="details-participant-avatar"
+                                  style={{
+                                    backgroundColor: bgColor,
+                                    color: fgColor,
+                                  }}
+                                >
+                                  {participantName ? participantName[0] : "?"}
+                                </span>
+                                <span className="details-participant-name">
+                                  {participantName && participantName.length > 15 
+                                    ? participantName.substring(0, 15) + "..."
+                                    : participantName}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Right Panel - Sidebar */}
@@ -787,16 +839,24 @@ const RegisteredEvents = () => {
               </button>
               {detailsModalEvent && (() => {
                 const registered = isUserRegistered(detailsModalEvent);
-                const declined = isRegistrationDeclined(detailsModalEvent);
                 const eventId = detailsModalEvent.eventId || detailsModalEvent.EventId || detailsModalEvent.id || detailsModalEvent._id;
                 const isApplying = applyingEventId === eventId;
                 const isPrivate = detailsModalEvent.IsPrivate || detailsModalEvent.isPrivate || detailsModalEvent.private;
+                const registrationStatus = getUserRegistrationStatus(detailsModalEvent);
                 
                 let buttonText;
                 if (isApplying) {
                   buttonText = "Applying...";
                 } else if (registered) {
-                  buttonText = declined ? "Declined" : (isPrivate ? "Requested" : "Joined");
+                  if (registrationStatus === -1) {
+                    buttonText = "Declined";
+                  } else if (registrationStatus === 1) {
+                    buttonText = "Joined";
+                  } else if (registrationStatus === 0) {
+                    buttonText = "Requested";
+                  } else {
+                    buttonText = isPrivate ? "Requested" : "Joined";
+                  }
                 } else {
                   buttonText = isPrivate ? "Request to Join" : "Join Event";
                 }

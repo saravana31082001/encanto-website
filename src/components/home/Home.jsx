@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import LoadingSpinner from '../common/LoadingSpinner';
 import EncantoLogo from '../../assets/SVG/EncantoLogo.svg';
 import DashboardIcon from '../../assets/SVG/DashboardIcon.svg';
+import AdminPanelIcon from '../../assets/SVG/AdminPanelIcon.svg';
 import NewEventIcon from '../../assets/SVG/NewEventIcon.svg';
 import MyEventsIcon from '../../assets/SVG/MyEventsIcon.svg';
 import ManageRequestsIcon from '../../assets/SVG/ManageRequestsIcon.svg';
@@ -15,6 +16,7 @@ import './Home.css';
 
 // Lazy load components for code splitting
 const Dashboard = lazy(() => import('./dashboard/Dashboard'));
+const AdminPanel = lazy(() => import('./admin-panel/AdminPanel'));
 const BrowseEvents = lazy(() => import('./browse-events/BrowseEvents'));
 const RegisteredEvents = lazy(() => import('./registered-events/RegisteredEvents'));
 const EventHistory = lazy(() => import('./event-history/EventHistory'));
@@ -48,6 +50,9 @@ const Home = ({ activeSection }) => {
       const isHost = userProfileType.toLowerCase() === 'host';
       if (isHost) {
         switch (location.pathname) {
+          case '/admin':
+            setActiveComponent('AdminPanel');
+            break;
           case '/dashboard':
             setActiveComponent('Dashboard');
             break;
@@ -61,7 +66,7 @@ const Home = ({ activeSection }) => {
             setActiveComponent('ManageRequests');
             break;
           default:
-            setActiveComponent('Dashboard');
+            setActiveComponent('AdminPanel');
         }
       }
     }
@@ -82,7 +87,7 @@ const Home = ({ activeSection }) => {
     
     if (isHost) {
       return [
-        { name: 'Dashboard', component: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
+        { name: 'Admin Panel', component: 'AdminPanel', icon: AdminPanelIcon, path: '/admin' },
         { name: 'New Event', component: 'NewEvent', icon: NewEventIcon, path: '/create' },
         { name: 'My Events', component: 'MyEvents', icon: MyEventsIcon, path: '/events' },
         { name: 'Manage Requests', component: 'ManageRequests', icon: ManageRequestsIcon, path: '/manage' },
@@ -114,6 +119,8 @@ const Home = ({ activeSection }) => {
   const renderActiveComponent = () => {
     const ComponentToRender = () => {
       switch (activeComponent) {
+        case 'AdminPanel':
+          return <AdminPanel />;
         case 'Dashboard':
           return <Dashboard />;
         case 'BrowseEvents':

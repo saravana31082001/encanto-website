@@ -533,6 +533,15 @@
   background: #f59e0b;
 }
 
+.apply-button.closed {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.apply-button.closed:hover {
+  background: #9ca3af;
+}
+
 /* Popover Styles */
 .popover-overlay {
   position: fixed;
@@ -1228,6 +1237,17 @@
 .details-modal-action.requested:hover {
   background: #f59e0b;
   box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+}
+
+.details-modal-action.closed {
+  background: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: 0 1px 3px rgba(156, 163, 175, 0.3);
+}
+
+.details-modal-action.closed:hover {
+  background: #9ca3af;
+  box-shadow: 0 1px 3px rgba(156, 163, 175, 0.3);
 }
 
 /* Responsive Design for Modal */

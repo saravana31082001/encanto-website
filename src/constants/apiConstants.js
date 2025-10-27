@@ -47,6 +47,7 @@ export const EVENT_ENDPOINTS = {
   HOSTED_UPCOMING: '/events/hosted-upcoming',
   HOSTED_PAST: '/events/hosted-past',
   UPDATE_EVENT_STATUS: '/events/update-event-status',
+  UPDATE_EVENT_DETAILS: '/events/update-event-details',
   GET_PENDING_REQUESTS: '/events/pending-requests',
   UPDATE_PENDING_REQUEST: '/events/update-pending-request',
 };

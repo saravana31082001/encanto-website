@@ -1,3 +1,251 @@
 .dashboard-container {
-  padding: 2rem;
+  padding: 0;
+  background-color: white;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Header Styling - Match Browse Events Page */
+.dashboard-header {
+  padding: 2.4rem 2.4rem 2rem 2.4rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  position: relative;
+}
+
+.dashboard-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3.2px;
+  background: linear-gradient(90deg, #1D68F5 0%, #3B82F6 100%);
+}
+
+.dashboard-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.4rem 0;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.dashboard-header p {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.6;
+  max-width: 600px;
+  font-weight: 400;
+}
+
+/* Section Styling */
+.stats-section {
+  padding: 2rem 2.4rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 2rem 0;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.025em;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  max-width: 1200px;
+}
+
+.stat-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0 0 0.75rem 0;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #2563eb;
+  margin: 0;
+  line-height: 1;
+}
+
+/* Activity Section */
+.activity-section {
+  padding: 2rem 2.4rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 1200px;
+}
+
+.activity-item {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.activity-item.clickable {
+  cursor: pointer;
+}
+
+.activity-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.activity-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.activity-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.activity-description {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .dashboard-header {
+    padding: 1.6rem 1.6rem 1.2rem 1.6rem;
+  }
+
+  .stats-section {
+    padding: 1.5rem 1.6rem;
+  }
+
+  .activity-section {
+    padding: 1.5rem 1.6rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    border-radius: 0;
+  }
+
+  .dashboard-header {
+    padding: 1.2rem 1.2rem 1rem 1.2rem;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .stats-section {
+    padding: 1.25rem 1.2rem;
+  }
+
+  .activity-section {
+    padding: 1.25rem 1.2rem;
+  }
+
+  .section-title {
+    font-size: 1.3rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1.25rem;
+  }
+
+  .stat-number {
+    font-size: 2rem;
+  }
+
+  .activity-item {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-header {
+    padding: 1rem 0.8rem 0.8rem 0.8rem;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.3rem;
+  }
+
+  .stats-section {
+    padding: 1rem 0.8rem;
+  }
+
+  .activity-section {
+    padding: 1rem 0.8rem;
+  }
+
+  .section-title {
+    font-size: 1.2rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-number {
+    font-size: 1.8rem;
+  }
+
+  .activity-item {
+    padding: 1rem;
+  }
+
+  .activity-title {
+    font-size: 1rem;
+  }
+
+  .activity-description {
+    font-size: 0.875rem;
+  }
 }
