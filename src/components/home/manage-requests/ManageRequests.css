@@ -1,3 +1,361 @@
 .manage-requests-container {
+  padding: 0;
+  background-color: white;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  border-radius: 12px;
+  box-shadow: none;
+  border: none;
+}
+
+/* Header Styling */
+.manage-requests-header {
+  padding: 2.4rem 2.4rem 2rem 2.4rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  position: relative;
+}
+
+.manage-requests-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3.2px;
+  background: linear-gradient(90deg, #1D68F5 0%, #3B82F6 100%);
+}
+
+.manage-requests-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.4rem 0;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.manage-requests-header p {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.6;
+  max-width: 600px;
+  font-weight: 400;
+}
+
+/* Requests List Container */
+.requests-list-container {
+  padding: 2rem 2.4rem;
+}
+
+.requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Request Card */
+.request-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.request-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #d1d5db;
+}
+
+/* Request Info Section */
+.request-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 3rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.request-event-section,
+.request-participant-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.request-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.request-event-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+
+.request-schedule {
+  font-size: 0.875rem;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.request-participant-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.request-participant-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.request-participant-name {
+  font-size: 1.125rem;
+  color: #111827;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.request-timestamp {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+/* Action Buttons */
+.request-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.accept-button,
+.reject-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid;
+  background: white;
+}
+
+.accept-button {
+  border-color: #d1d5db;
+  color: #6b7280;
+}
+
+.accept-button:hover:not(:disabled) {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #16a34a;
+}
+
+.accept-button:active:not(:disabled) {
+  background: #dcfce7;
+  border-color: #4ade80;
+}
+
+.accept-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reject-button {
+  border-color: #d1d5db;
+  color: #6b7280;
+}
+
+.reject-button:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.reject-button:active:not(:disabled) {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
+.reject-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-icon {
+  width: 22px;
+  height: 22px;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
   padding: 2rem;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-container p {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  padding: 2rem;
+}
+
+.empty-state p {
+  color: #6b7280;
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .manage-requests-header {
+    padding: 1.6rem 1.6rem 1.2rem 1.6rem;
+  }
+
+  .requests-list-container {
+    padding: 1.5rem 1.6rem;
+  }
+
+  .request-info {
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .manage-requests-container {
+    border-radius: 0;
+  }
+
+  .manage-requests-header {
+    padding: 1.2rem 1.2rem 1rem 1.2rem;
+  }
+
+  .manage-requests-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .requests-list-container {
+    padding: 1.25rem 1.2rem;
+  }
+
+  .requests-list {
+    gap: 1.25rem;
+  }
+
+  .request-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .request-info {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .request-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 480px) {
+  .manage-requests-header {
+    padding: 1rem 0.8rem 0.8rem 0.8rem;
+  }
+
+  .manage-requests-header h1 {
+    font-size: 1.3rem;
+  }
+
+  .requests-list-container {
+    padding: 1rem 0.8rem;
+  }
+
+  .request-card {
+    padding: 1.25rem;
+  }
+
+  .request-event-name {
+    font-size: 1.125rem;
+  }
+
+  .request-participant-name {
+    font-size: 1rem;
+  }
+
+  .accept-button,
+  .reject-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .button-icon {
+    width: 20px;
+    height: 20px;
+  }
 }

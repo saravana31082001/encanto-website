@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./BrowseEvents.css";
 import { useApiService } from "../../../services/apiService";
+import { useApp } from "../../../context/AppContext";
 import { 
   startConnection, 
   stopConnection, 
@@ -18,8 +19,12 @@ const BrowseEvents = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("Disconnected");
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [detailsModalEvent, setDetailsModalEvent] = useState(null);
+  const [applyingEventId, setApplyingEventId] = useState(null);
 
   const apiService = useApiService();
+  const { user: currentUser } = useApp();
 
   // Helper function to sort events by start time (earliest first)
   const sortEventsByStartTime = (events) => {
@@ -39,6 +44,32 @@ const BrowseEvents = () => {
   const insertEventInOrder = (events, newEvent) => {
     const newEvents = [...events, newEvent];
     return sortEventsByStartTime(newEvents);
+  };
+
+  // Refresh events data (used after applying to an event)
+  const refreshEvents = async () => {
+    try {
+      setError(null);
+      const events = await apiService.getBrowseUpcomingEvents();
+      const eventsArray = Array.isArray(events) ? events : [events];
+      const sortedEvents = sortEventsByStartTime(eventsArray);
+      setEventsData(sortedEvents);
+      
+      // If modal is open, update the modal event data as well
+      if (detailsModalEvent) {
+        const modalEventId = detailsModalEvent.eventId || detailsModalEvent.EventId || detailsModalEvent.id || detailsModalEvent._id;
+        const updatedEvent = sortedEvents.find(event => {
+          const eventId = event.eventId || event.EventId || event.id || event._id;
+          return eventId === modalEventId;
+        });
+        if (updatedEvent) {
+          setDetailsModalEvent(updatedEvent);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to refresh events:', err);
+      // Don't set error state on refresh to avoid disrupting UI
+    }
   };
 
   // Load events data from API on component mount
@@ -61,7 +92,8 @@ const BrowseEvents = () => {
     };
 
     loadEvents();
-  }, []); // Empty dependency array to run only once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on component mount
 
   // SignalR connection and real-time updates
   useEffect(() => {
@@ -207,6 +239,117 @@ const BrowseEvents = () => {
     setSelectedEvent(null);
   };
 
+  // Handle details modal
+  const handleViewDetails = (event) => {
+    setDetailsModalEvent(event);
+    setDetailsModalVisible(true);
+  };
+
+  const handleCloseDetailsModal = () => {
+    setDetailsModalVisible(false);
+    setDetailsModalEvent(null);
+  };
+
+  // Handle apply/register button click
+  const handleApplyToEvent = async (event) => {
+    if (!currentUser) {
+      window.dispatchEvent(new CustomEvent('api:notify', { 
+        detail: { type: 'error', message: 'Please login to apply to events' } 
+      }));
+      return;
+    }
+
+    const userId = currentUser.userId || currentUser._id || currentUser.Id;
+    if (!userId) {
+      window.dispatchEvent(new CustomEvent('api:notify', { 
+        detail: { type: 'error', message: 'User ID not found' } 
+      }));
+      return;
+    }
+
+    const eventId = event.eventId || event.EventId || event.id || event._id;
+    if (!eventId) {
+      window.dispatchEvent(new CustomEvent('api:notify', { 
+        detail: { type: 'error', message: 'Invalid event ID' } 
+      }));
+      return;
+    }
+
+    try {
+      setApplyingEventId(eventId);
+      await apiService.applyToEvent(eventId, userId);
+      // Refresh events to show updated participant list
+      await refreshEvents();
+    } catch (err) {
+      console.error('Failed to apply to event:', err);
+      // Error is already handled by the API service
+    } finally {
+      setApplyingEventId(null);
+    }
+  };
+
+  // Check if current user is already registered for the event
+  const isUserRegistered = (event) => {
+    if (!currentUser || !event.participants || event.participants.length === 0) {
+      return false;
+    }
+
+    const userId = currentUser.userId || currentUser._id || currentUser.Id;
+    if (!userId) {
+      return false;
+    }
+
+    return event.participants.some(participant => 
+      participant.participantId === userId || 
+      participant.ParticipantId === userId
+    );
+  };
+
+  // Get user's registration status for the event (null if not registered, status number if registered)
+  const getUserRegistrationStatus = (event) => {
+    if (!currentUser || !event.participants || event.participants.length === 0) {
+      return null;
+    }
+
+    const userId = currentUser.userId || currentUser._id || currentUser.Id;
+    if (!userId) {
+      return null;
+    }
+
+    const participant = event.participants.find(p => 
+      (p.participantId === userId) || (p.ParticipantId === userId)
+    );
+
+    return participant ? (participant.registrationStatus !== undefined ? participant.registrationStatus : participant.RegistrationStatus) : null;
+  };
+
+  // Get button text based on event type and registration status
+  const getButtonText = (event, isRegistered) => {
+    const isPrivate = event.IsPrivate || event.isPrivate || event.private;
+    const registrationStatus = getUserRegistrationStatus(event);
+    
+    // For private events, check if declined (status = -1)
+    if (isPrivate && isRegistered && registrationStatus === -1) {
+      return "Declined";
+    }
+    
+    if (isRegistered) {
+      return isPrivate ? "Requested" : "Joined";
+    }
+    
+    return isPrivate ? "Request" : "Join";
+  };
+
+  // Check if user's registration was declined
+  const isRegistrationDeclined = (event) => {
+    if (!event.IsPrivate && !event.isPrivate && !event.private) {
+      return false; // Only applies to private events
+    }
+    
+    const registrationStatus = getUserRegistrationStatus(event);
+    return registrationStatus === -1;
+  };
+
   // Format schedule (date + start–end time)
   const formatSchedule = (start, end) => {
     if (!start || !end) return { date: "", timeRange: "" };
@@ -316,12 +459,12 @@ const BrowseEvents = () => {
                      <h2 className="event-title">{event.title || event.Title || event.eventTitle || event.name || event.eventName || 'Untitled Event'}</h2>
                    </div>
                    <p className="event-description">{event.description || event.Description || event.eventDescription || 'No description available'}</p>
-                  <div 
-                    className={`participants-badge ${!(event.IsPrivate || event.isPrivate || event.private) ? 'clickable' : ''}`}
-                    onClick={!(event.IsPrivate || event.isPrivate || event.private) ? (e) => handleParticipantsClick(event, e.currentTarget) : undefined}
-                  >
-                    Total Participants : {event.totalRegisteredParticipants || event.TotalRegisteredParticipants || event.Participants?.length || 0}
-                  </div>
+                  {(event.IsPrivate || event.isPrivate || event.private) && (
+                    <div className="private-indicator">
+                      <span className="lock-icon">🔒</span>
+                      <span className="private-text">Private</span>
+                    </div>
+                  )}
                 </div>
 
                  {/* Right Section - Organizer and Schedule */}
@@ -355,16 +498,40 @@ const BrowseEvents = () => {
                      <div className="schedule-time">{timeRange}</div>
                    </div>
                    
-                   {(event.IsPrivate || event.isPrivate || event.private) && (
-                     <div className="private-indicator">
-                       <span className="lock-icon">🔒</span>
-                       <span className="private-text">Private</span>
-                     </div>
-                   )}
-                   
-                   <button className="apply-button">
-                     {(event.IsPrivate || event.isPrivate || event.private) ? "Request" : "Join"}
-                   </button>
+                   <div className="event-actions">
+                     <button className="view-details-button" onClick={() => handleViewDetails(event)}>
+                       View Details
+                     </button>
+                     {(() => {
+                       const registered = isUserRegistered(event);
+                       const declined = isRegistrationDeclined(event);
+                       const eventId = event.eventId || event.EventId || event.id || event._id;
+                       const isApplying = applyingEventId === eventId;
+                       const buttonText = isApplying ? "Applying..." : getButtonText(event, registered);
+                       
+                       // Determine status class based on button text
+                       let statusClass = '';
+                       if (!isApplying) {
+                         if (buttonText === 'Joined') {
+                           statusClass = 'joined';
+                         } else if (buttonText === 'Requested') {
+                           statusClass = 'requested';
+                         } else if (buttonText === 'Declined') {
+                           statusClass = 'declined';
+                         }
+                       }
+                       
+                       return (
+                         <button 
+                           className={`apply-button ${registered ? 'registered' : ''} ${statusClass}`}
+                           onClick={() => handleApplyToEvent(event)}
+                           disabled={registered || isApplying}
+                         >
+                           {buttonText}
+                         </button>
+                       );
+                     })()}
+                   </div>
                  </div>
               </div>
             );
@@ -387,35 +554,349 @@ const BrowseEvents = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="popover-header">
-              <h3>Participants ({selectedEvent.TotalRegisteredParticipants || selectedEvent.Participants?.length || 0})</h3>
+              <h3>Participants ({selectedEvent.TotalRegisteredParticipants || selectedEvent.totalRegisteredParticipants || (selectedEvent.Participants || selectedEvent.participants || []).length})</h3>
               <button className="popover-close" onClick={handleClosePopover}>×</button>
             </div>
             <div className="participants-list">
-              {selectedEvent.Participants && selectedEvent.Participants.length > 0 ? (
-                selectedEvent.Participants.map((participant) => (
-                  <div key={participant.ParticipantId} className="participant-item">
-                    <span
-                      className="participant-avatar"
-                      style={{
-                        backgroundColor: participant.BackgroundColour || participant.Background || "#9c27b0",
-                        color: participant.ForegroundColour || participant.Foreground || "#fff",
-                      }}
-                    >
-                      {participant.ParticipantName ? participant.ParticipantName[0] : "?"}
-                    </span>
-                    <span className="participant-name">
-                      {participant.ParticipantName && participant.ParticipantName.length > 22 
-                        ? participant.ParticipantName.substring(0, 22) + ".."
-                        : participant.ParticipantName || "Unknown Participant"}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="no-participants">No participants registered</div>
-              )}
+              {(() => {
+                const participants = selectedEvent.Participants || selectedEvent.participants || [];
+                const acceptedParticipants = participants.filter(p => {
+                  const status = p.registrationStatus !== undefined ? p.registrationStatus : p.RegistrationStatus;
+                  return status === 1;
+                });
+                return acceptedParticipants.length > 0 ? (
+                  acceptedParticipants.map((participant) => {
+                    const participantId = participant.ParticipantId || participant.participantId || participant.id;
+                    const participantName = participant.ParticipantName || participant.participantName || participant.name || "Unknown Participant";
+                    const bgColor = participant.BackgroundColour || participant.Background || participant.backgroundColour || participant.background || "#9c27b0";
+                    const fgColor = participant.ForegroundColour || participant.Foreground || participant.foregroundColour || participant.foreground || "#fff";
+                    
+                    return (
+                      <div key={participantId} className="participant-item">
+                        <span
+                          className="participant-avatar"
+                          style={{
+                            backgroundColor: bgColor,
+                            color: fgColor,
+                          }}
+                        >
+                          {participantName ? participantName[0] : "?"}
+                        </span>
+                        <span className="participant-name">
+                          {participantName && participantName.length > 15 
+                            ? participantName.substring(0, 15) + "..."
+                            : participantName}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="no-participants">No participants registered</div>
+                );
+              })()}
             </div>
           </div>
         </>
+      )}
+
+      {/* Event Details Modal - Azure DevOps Style */}
+      {detailsModalVisible && detailsModalEvent && (
+        <div className="details-modal-overlay" onClick={handleCloseDetailsModal}>
+          <div className="details-modal-container" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="details-modal-header">
+              <div className="details-modal-title-section">
+                <h2 className="details-modal-title">Event Details</h2>
+              </div>
+              <button className="details-modal-close" onClick={handleCloseDetailsModal} title="Close">
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="details-modal-body">
+              {/* Left Panel - Main Details */}
+              <div className="details-main-panel">
+                <div className="details-section">
+                  <div className="details-section-content">
+                    <div className="details-title-container">
+                      <h2 className="details-event-title">
+                        {detailsModalEvent.title || detailsModalEvent.Title || detailsModalEvent.eventTitle || detailsModalEvent.name || detailsModalEvent.eventName || 'Untitled Event'}
+                      </h2>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="details-section">
+                  <h3 className="details-section-title">Description</h3>
+                  <div className="details-section-content">
+                    <p className="details-description">
+                      {detailsModalEvent.description || detailsModalEvent.Description || detailsModalEvent.eventDescription || 'No description available'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="details-section">
+                  <h3 className="details-section-title">Event Details</h3>
+                  <div className="details-section-content">
+                    <div className="details-info-grid">
+                      <div className="details-info-item">
+                        <span className="details-info-label">Event Type</span>
+                        <span className="details-info-value">
+                          {(detailsModalEvent.IsPrivate || detailsModalEvent.isPrivate || detailsModalEvent.private) ? "Private" : "Public"}
+                        </span>
+                      </div>
+                      <div className="details-info-item">
+                        <span className="details-info-label">Total Participants</span>
+                        <span className="details-info-value">
+                          {detailsModalEvent.totalRegisteredParticipants || detailsModalEvent.TotalRegisteredParticipants || (detailsModalEvent.Participants || detailsModalEvent.participants || []).length}
+                        </span>
+                      </div>
+                      {detailsModalEvent.location || detailsModalEvent.Location && (
+                        <div className="details-info-item">
+                          <span className="details-info-label">Location</span>
+                          <span className="details-info-value">
+                            {detailsModalEvent.location || detailsModalEvent.Location || 'Not specified'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Meeting Link - Only show if user is registered and link exists */}
+                {isUserRegistered(detailsModalEvent) && 
+                 (() => {
+                   const meetingLink = detailsModalEvent.MeetingLink || detailsModalEvent.meetingLink || detailsModalEvent.meeting_link;
+                   return meetingLink && meetingLink.trim() !== '' && (
+                     <div className="details-section">
+                       <h3 className="details-section-title">Meeting Link</h3>
+                       <div className="details-section-content">
+                         <a 
+                           href={meetingLink}
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           className="meeting-link"
+                           style={{
+                             color: '#0078d4',
+                             textDecoration: 'none',
+                             wordBreak: 'break-all',
+                             fontSize: '14px'
+                           }}
+                         >
+                           {meetingLink}
+                         </a>
+                       </div>
+                     </div>
+                   );
+                 })()}
+
+                {!(detailsModalEvent.IsPrivate || detailsModalEvent.isPrivate || detailsModalEvent.private) && 
+                 (() => {
+                   const detailsParticipants = detailsModalEvent.Participants || detailsModalEvent.participants || [];
+                   const acceptedDetailsParticipants = detailsParticipants.filter(p => {
+                     const status = p.registrationStatus !== undefined ? p.registrationStatus : p.RegistrationStatus;
+                     return status === 1;
+                   });
+                   return acceptedDetailsParticipants.length > 0 && (
+                     <div className="details-section">
+                       <h3 className="details-section-title">Participants</h3>
+                       <div className="details-section-content">
+                         <div className="details-participants-grid">
+                           {acceptedDetailsParticipants.map((participant) => {
+                             const participantId = participant.ParticipantId || participant.participantId || participant.id;
+                             const participantName = participant.ParticipantName || participant.participantName || participant.name || "Unknown Participant";
+                             const bgColor = participant.BackgroundColour || participant.Background || participant.backgroundColour || participant.background || "#9c27b0";
+                             const fgColor = participant.ForegroundColour || participant.Foreground || participant.foregroundColour || participant.foreground || "#fff";
+                             
+                             return (
+                               <div key={participantId} className="details-participant-card">
+                                 <span
+                                   className="details-participant-avatar"
+                                   style={{
+                                     backgroundColor: bgColor,
+                                     color: fgColor,
+                                   }}
+                                 >
+                                   {participantName ? participantName[0] : "?"}
+                                 </span>
+                                 <span className="details-participant-name">
+                                   {participantName && participantName.length > 15 
+                                     ? participantName.substring(0, 15) + "..."
+                                     : participantName}
+                                 </span>
+                               </div>
+                             );
+                           })}
+                         </div>
+                       </div>
+                     </div>
+                   );
+                 })()}
+              </div>
+
+              {/* Right Panel - Sidebar */}
+              <div className="details-sidebar-panel">
+                <div className="details-sidebar-section">
+                  <h3 className="details-sidebar-title">Schedule</h3>
+                  <div className="details-sidebar-content">
+                    <div className="details-schedule-item">
+                      <span className="details-schedule-label">Start Date & Time</span>
+                      <span className="details-schedule-value">
+                        {detailsModalEvent.StartTimestamp || detailsModalEvent.startTimestamp || detailsModalEvent.startTime || detailsModalEvent.start_time
+                          ? new Date(detailsModalEvent.StartTimestamp || detailsModalEvent.startTimestamp || detailsModalEvent.startTime || detailsModalEvent.start_time).toLocaleString('en-US', {
+                              weekday: 'short',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })
+                          : 'Not specified'}
+                      </span>
+                    </div>
+                    <div className="details-schedule-item">
+                      <span className="details-schedule-label">End Date & Time</span>
+                      <span className="details-schedule-value">
+                        {detailsModalEvent.EndTimestamp || detailsModalEvent.endTimestamp || detailsModalEvent.endTime || detailsModalEvent.end_time
+                          ? new Date(detailsModalEvent.EndTimestamp || detailsModalEvent.endTimestamp || detailsModalEvent.endTime || detailsModalEvent.end_time).toLocaleString('en-US', {
+                              weekday: 'short',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            })
+                          : 'Not specified'}
+                      </span>
+                    </div>
+                    <div className="details-schedule-item">
+                      <span className="details-schedule-label">Duration</span>
+                      <span className="details-schedule-value">
+                        {(() => {
+                          const start = detailsModalEvent.StartTimestamp || detailsModalEvent.startTimestamp || detailsModalEvent.startTime || detailsModalEvent.start_time;
+                          const end = detailsModalEvent.EndTimestamp || detailsModalEvent.endTimestamp || detailsModalEvent.endTime || detailsModalEvent.end_time;
+                          if (start && end) {
+                            const duration = new Date(end) - new Date(start);
+                            const hours = Math.floor(duration / (1000 * 60 * 60));
+                            const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+                            return `${hours}h ${minutes}m`;
+                          }
+                          return 'Not specified';
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="details-sidebar-section">
+                  <h3 className="details-sidebar-title">Organizer</h3>
+                  <div className="details-sidebar-content">
+                    <div className="details-organizer-card">
+                      <span
+                        className="details-organizer-avatar"
+                        style={{
+                          backgroundColor: detailsModalEvent.OrganizerDetails?.BackgroundColour || detailsModalEvent.OrganizerDetails?.Background || detailsModalEvent.organizerDetails?.backgroundColour || detailsModalEvent.organizerDetails?.background || "#9c27b0",
+                          color: detailsModalEvent.OrganizerDetails?.ForegroundColour || detailsModalEvent.OrganizerDetails?.Foreground || detailsModalEvent.organizerDetails?.foregroundColour || detailsModalEvent.organizerDetails?.foreground || "#fff",
+                        }}
+                      >
+                        {(detailsModalEvent.OrganizerDetails?.OrganizerName || detailsModalEvent.organizerDetails?.organizerName || detailsModalEvent.organizerDetails?.name)
+                          ? (detailsModalEvent.OrganizerDetails?.OrganizerName || detailsModalEvent.organizerDetails?.organizerName || detailsModalEvent.organizerDetails?.name)[0]
+                          : "?"}
+                      </span>
+                      <div className="details-organizer-info">
+                        <span className="details-organizer-name">
+                          {detailsModalEvent.OrganizerDetails?.OrganizerName || detailsModalEvent.organizerDetails?.organizerName || detailsModalEvent.organizerDetails?.name || "Unknown Organizer"}
+                        </span>
+                        {(() => {
+                          const designation = detailsModalEvent.OrganizerDetails?.OrganizerDesignation || detailsModalEvent.organizerDetails?.organizerDesignation;
+                          const company = detailsModalEvent.OrganizerDetails?.Company || detailsModalEvent.organizerDetails?.company;
+                          
+                          if (designation && company) {
+                            return (
+                              <span className="details-organizer-role">
+                                {designation}, {company}
+                              </span>
+                            );
+                          } else if (designation) {
+                            return (
+                              <span className="details-organizer-role">
+                                {designation}
+                              </span>
+                            );
+                          } else if (company) {
+                            return (
+                              <span className="details-organizer-role">
+                                {company}
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
+                        {detailsModalEvent.OrganizerDetails?.Email || detailsModalEvent.organizerDetails?.email && (
+                          <span className="details-organizer-email">
+                            {detailsModalEvent.OrganizerDetails?.Email || detailsModalEvent.organizerDetails?.email}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="details-modal-footer">
+              <button className="details-modal-cancel" onClick={handleCloseDetailsModal}>
+                Close
+              </button>
+              {detailsModalEvent && (() => {
+                const registered = isUserRegistered(detailsModalEvent);
+                const declined = isRegistrationDeclined(detailsModalEvent);
+                const eventId = detailsModalEvent.eventId || detailsModalEvent.EventId || detailsModalEvent.id || detailsModalEvent._id;
+                const isApplying = applyingEventId === eventId;
+                const isPrivate = detailsModalEvent.IsPrivate || detailsModalEvent.isPrivate || detailsModalEvent.private;
+                
+                let buttonText;
+                if (isApplying) {
+                  buttonText = "Applying...";
+                } else if (registered) {
+                  buttonText = declined ? "Declined" : (isPrivate ? "Requested" : "Joined");
+                } else {
+                  buttonText = isPrivate ? "Request to Join" : "Join Event";
+                }
+                
+                // Determine status class based on button text (only for registered states)
+                let statusClass = '';
+                if (!isApplying && registered) {
+                  if (buttonText === 'Joined') {
+                    statusClass = 'joined';
+                  } else if (buttonText === 'Requested') {
+                    statusClass = 'requested';
+                  } else if (buttonText === 'Declined') {
+                    statusClass = 'declined';
+                  }
+                }
+                
+                return (
+                  <button 
+                    className={`details-modal-action ${registered ? 'registered' : ''} ${statusClass}`}
+                    onClick={() => {
+                      if (detailsModalEvent) {
+                        handleApplyToEvent(detailsModalEvent);
+                      }
+                    }}
+                    disabled={registered || isApplying}
+                  >
+                    {buttonText}
+                  </button>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
