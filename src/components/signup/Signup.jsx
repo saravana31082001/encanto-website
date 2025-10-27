@@ -11,7 +11,7 @@ import './Signup.css';
 const Signup = () => {
   const navigate = useNavigate();
   const { register } = useApiService();
-  const { isAuthenticated } = useApp();
+  const { isAuthenticated, user } = useApp();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -25,10 +25,13 @@ const Signup = () => {
 
   // Redirect if user is already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+    if (isAuthenticated && user) {
+      // Redirect based on user type - check profileType property
+      const isHost = user.profileType?.toLowerCase() === 'host' || user.isHost === true;
+      const redirectPath = isHost ? '/admin' : '/dashboard';
+      navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const handleChange = (e) => {
     setFormData({

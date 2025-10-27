@@ -852,6 +852,66 @@ export const events = {
     }
   },
 
+  // Update event details
+  async updateEventDetails(eventData) {
+    try {
+      const url = `${API_CONFIG.BASE_URL}${EVENT_ENDPOINTS.UPDATE_EVENT_DETAILS}`;
+      
+      const options = {
+        method: HTTP_METHODS.PUT,
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        },
+        body: JSON.stringify(eventData)
+      };
+
+      // Add session key if user is authenticated
+      const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
+      if (sessionKey) {
+        options.headers['session-key'] = sessionKey;
+      }
+
+      console.log('Making API call to:', url, 'with options:', options);
+
+      const response = await fetch(url, options);
+
+      if (!response.ok) {
+        if (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN) {
+          localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME);
+        }
+        let serverMessage = '';
+        try {
+          serverMessage = await response.text();
+        } catch (_) {
+          // ignore
+        }
+        const statusLine = `${response.status} - ${response.statusText || 'Error'}`;
+        const message = serverMessage && serverMessage.trim().length > 0 ? serverMessage : statusLine;
+        const err = new Error(`${ERROR_MESSAGES.API_ERROR}: ${message}`);
+        try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message } })); } catch (_) {}
+        throw err;
+      }
+
+      const responseText = await response.text();
+      try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'success', message: 'Event updated successfully' } })); } catch (_) {}
+      
+      if (responseText.trim() === '') {
+        return { success: true, message: SUCCESS_MESSAGES.OPERATION_COMPLETED };
+      }
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        return { success: true, message: responseText };
+      }
+    } catch (error) {
+      console.error('updateEventDetails() API call failed:', error);
+      try {
+        window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: error.message } }));
+      } catch (_) {}
+      throw error;
+    }
+  },
+
   // Get all pending requests for a host
   async getPendingRequests(hostId) {
     try {
@@ -1010,6 +1070,7 @@ export const useApiService = () => {
     createEvent: events.create,
     applyToEvent: events.apply,
     updateEventStatus: events.updateEventStatus,
+    updateEventDetails: events.updateEventDetails,
     getPendingRequests: events.getPendingRequests,
     updatePendingRequest: events.updatePendingRequest,
 

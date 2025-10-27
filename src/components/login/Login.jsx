@@ -12,7 +12,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const api = useApiService(); // 🎯 Get API functions
-  const { login: contextLogin, isAuthenticated } = useApp(); // 🔥 Get context login function and auth state
+  const { login: contextLogin, isAuthenticated, user } = useApp(); // 🔥 Get context login function, auth state, and user data
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -23,10 +23,14 @@ const Login = () => {
 
   // Redirect if user is already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+    if (isAuthenticated && user) {
+      // Redirect based on user type - check profileType property
+      const isHost = user.profileType?.toLowerCase() === 'host' || user.isHost === true;
+      const redirectPath = isHost ? '/admin' : '/dashboard';
+      console.log('Login redirect - User:', user, 'isHost:', isHost, 'redirectPath:', redirectPath);
+      navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   // Check for success message from signup redirect
   useEffect(() => {
@@ -69,14 +73,13 @@ const Login = () => {
       // Call the context login function which handles both API call and state update
       await contextLogin({ email: formData.email, passwordHash });
       
-      // Success! Navigate to dashboard
-      navigate('/dashboard');
+      // Don't set loading to false here - let the redirect happen
+      // The useEffect will trigger and handle the redirect
     } catch (error) {
       // Show error message in the login component
       console.error('Login error:', error);
       const errorMessage = error.message || 'Login failed. Please check your credentials and try again.';
       setError(errorMessage);
-    } finally {
       setLoading(false);
     }
   };

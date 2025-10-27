@@ -6,7 +6,6 @@ import {
   FormControlLabel,
   Switch,
   Button,
-  Alert,
   Divider
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
@@ -34,7 +33,6 @@ const NewEvent = () => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState('');
 
   const handleInputChange = (field) => (event) => {
     const value = event.target ? event.target.value : event;
@@ -106,12 +104,13 @@ const NewEvent = () => {
     }
 
     if (!user) {
-      setSubmitMessage('User information not available. Please refresh the page.');
+      window.dispatchEvent(new CustomEvent('api:notify', {
+        detail: { message: 'User information not available. Please refresh the page.', type: 'error' }
+      }));
       return;
     }
 
     setIsSubmitting(true);
-    setSubmitMessage('');
 
     try {
       // Map form data to .NET CreateEventRequest model
@@ -132,40 +131,11 @@ const NewEvent = () => {
       const response = await createEvent(eventData);
       
       console.log('Event created successfully:', response);
-      setSubmitMessage(response.message || 'Event created successfully!');
       
-      // Scroll to top of page after successful event creation
-      // Use setTimeout to ensure DOM updates before scrolling
-      setTimeout(() => {
-        try {
-          // Find the main content container that has overflow-y: auto
-          const mainContent = document.querySelector('.main-content');
-          if (mainContent) {
-            mainContent.scrollTo({
-              top: 0,
-              left: 0,
-              behavior: 'smooth'
-            });
-          } else {
-            // Fallback to window scroll if main-content not found
-            window.scrollTo({
-              top: 0,
-              left: 0,
-              behavior: 'smooth'
-            });
-          }
-        } catch (e) {
-          // Fallback for older browsers
-          const mainContent = document.querySelector('.main-content');
-          if (mainContent) {
-            mainContent.scrollTop = 0;
-          } else {
-            window.scrollTo(0, 0);
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-          }
-        }
-      }, 100);
+      // Show success toast
+      window.dispatchEvent(new CustomEvent('api:notify', {
+        detail: { message: response.message || 'Event created successfully!', type: 'success' }
+      }));
       
       // Reset form after successful submission
       setFormData({
@@ -181,7 +151,11 @@ const NewEvent = () => {
       
     } catch (error) {
       console.error('Error creating event:', error);
-      setSubmitMessage(`Failed to create event: ${error.message}`);
+      
+      // Show error toast
+      window.dispatchEvent(new CustomEvent('api:notify', {
+        detail: { message: `Failed to create event: ${error.message}`, type: 'error' }
+      }));
     } finally {
       setIsSubmitting(false);
     }
@@ -195,15 +169,6 @@ const NewEvent = () => {
             <h1>Create an Event</h1>
             <p>Fill in the details below to create a new event</p>
           </div>
-
-          {submitMessage && (
-            <Alert 
-              severity={submitMessage.includes('successfully') ? 'success' : 'error'} 
-              sx={{ mt: 2, mb: 2, mx: 3 }}
-            >
-              {submitMessage}
-            </Alert>
-          )}
 
           <div className="new-event-section">
             

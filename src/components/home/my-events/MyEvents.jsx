@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import "./MyEvents.css";
 import { useApiService } from "../../../services/apiService";
 import { useApp } from "../../../context/AppContext";
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 
 const MyEvents = () => {
   const [overdueEventsData, setOverdueEventsData] = useState([]);
@@ -12,7 +16,19 @@ const MyEvents = () => {
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [detailsModalEvent, setDetailsModalEvent] = useState(null);
   const [isDetailsEventOverdue, setIsDetailsEventOverdue] = useState(false);
+  const [isDetailsEventUpcoming, setIsDetailsEventUpcoming] = useState(false);
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    meetingLink: '',
+    startTimestamp: null,
+    endTimestamp: null,
+    isAcceptingParticipants: true
+  });
+  const [editFormErrors, setEditFormErrors] = useState({});
 
   const apiService = useApiService();
   const { user: currentUser } = useApp();
@@ -112,7 +128,7 @@ const MyEvents = () => {
   }, [currentUser]); // Reload when user changes
 
   // Handle details modal
-  const handleViewDetails = (event) => {
+  const handleViewDetails = (event, isFromUpcoming = false) => {
     // Check if this event is overdue
     const now = new Date();
     const endTime = event.EndTimestamp || event.endTimestamp || event.endTime || event.end_time;
@@ -121,6 +137,7 @@ const MyEvents = () => {
     
     setDetailsModalEvent(event);
     setIsDetailsEventOverdue(isOverdue);
+    setIsDetailsEventUpcoming(isFromUpcoming);
     setDetailsModalVisible(true);
   };
 
@@ -128,6 +145,188 @@ const MyEvents = () => {
     setDetailsModalVisible(false);
     setDetailsModalEvent(null);
     setIsDetailsEventOverdue(false);
+    setIsDetailsEventUpcoming(false);
+    setIsEditMode(false);
+    setEditFormData({
+      title: '',
+      description: '',
+      meetingLink: '',
+      startTimestamp: null,
+      endTimestamp: null,
+      isAcceptingParticipants: true
+    });
+    setEditFormErrors({});
+  };
+
+  // Handle entering edit mode
+  const handleEnterEditMode = () => {
+    if (!detailsModalEvent) return;
+
+    const startTime = detailsModalEvent.StartTimestamp || detailsModalEvent.startTimestamp;
+    const endTime = detailsModalEvent.EndTimestamp || detailsModalEvent.endTimestamp;
+
+    setEditFormData({
+      title: detailsModalEvent.title || detailsModalEvent.Title || '',
+      description: detailsModalEvent.description || detailsModalEvent.Description || '',
+      meetingLink: detailsModalEvent.MeetingLink || detailsModalEvent.meetingLink || '',
+      startTimestamp: startTime ? dayjs(startTime) : null,
+      endTimestamp: endTime ? dayjs(endTime) : null,
+      isAcceptingParticipants: detailsModalEvent.Is_accepting_participants !== undefined 
+        ? detailsModalEvent.Is_accepting_participants 
+        : detailsModalEvent.isAcceptingParticipants !== undefined
+        ? detailsModalEvent.isAcceptingParticipants
+        : true
+    });
+    setIsEditMode(true);
+  };
+
+  // Handle canceling edit mode
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditFormData({
+      title: '',
+      description: '',
+      meetingLink: '',
+      startTimestamp: null,
+      endTimestamp: null,
+      isAcceptingParticipants: true
+    });
+    setEditFormErrors({});
+  };
+
+  // Handle form field changes
+  const handleEditFieldChange = (field, value) => {
+    setEditFormData(prev => {
+      const newData = {
+        ...prev,
+        [field]: value
+      };
+      
+      // Auto-set endTimestamp to 1 hour after startTimestamp when startTimestamp changes
+      if (field === 'startTimestamp' && value) {
+        newData.endTimestamp = value.add(1, 'hour');
+      }
+      
+      return newData;
+    });
+    
+    // Clear error for this field when user starts typing
+    if (editFormErrors[field]) {
+      setEditFormErrors(prev => ({
+        ...prev,
+        [field]: undefined
+      }));
+    }
+  };
+
+  // Handle saving edited event
+  const handleSaveEdit = async () => {
+    if (!detailsModalEvent) return;
+
+    const eventId = detailsModalEvent.EventId || detailsModalEvent.eventId || detailsModalEvent.id;
+    if (!eventId) {
+      console.error('Event ID not found');
+      return;
+    }
+
+    // Validate form fields
+    const newErrors = {};
+    
+    if (!editFormData.title || !editFormData.title.trim()) {
+      newErrors.title = 'Title is required and cannot be empty';
+    } else if (editFormData.title.length > 100) {
+      newErrors.title = 'Title must be 100 characters or less';
+    }
+    
+    if (!editFormData.description || !editFormData.description.trim()) {
+      newErrors.description = 'Description is required and cannot be empty';
+    } else if (editFormData.description.length > 1000) {
+      newErrors.description = 'Description must be 1000 characters or less';
+    }
+    
+    // Validate meeting link format (if provided)
+    if (editFormData.meetingLink && editFormData.meetingLink.trim() && 
+        !/^https?:\/\/.+/.test(editFormData.meetingLink.trim())) {
+      newErrors.meetingLink = 'Please enter a valid URL (must start with http:// or https://)';
+    }
+    
+    if (!editFormData.startTimestamp) {
+      newErrors.startTimestamp = 'Start date and time is required';
+    }
+    
+    if (!editFormData.endTimestamp) {
+      newErrors.endTimestamp = 'End date and time is required';
+    }
+
+    // Validate start time is before end time
+    if (editFormData.startTimestamp && editFormData.endTimestamp && 
+        editFormData.startTimestamp.valueOf() >= editFormData.endTimestamp.valueOf()) {
+      newErrors.endTimestamp = 'End time must be after start time';
+    }
+    
+    // If there are errors, set them and return
+    if (Object.keys(newErrors).length > 0) {
+      setEditFormErrors(newErrors);
+      return;
+    }
+
+    try {
+      setIsSavingEdit(true);
+
+      // Prepare request data according to EditEventDetailsRequest
+      // If meeting link is empty, send empty string
+      const requestData = {
+        EventId: eventId,
+        Title: editFormData.title.trim(),
+        Description: editFormData.description.trim(),
+        MeetingLink: editFormData.meetingLink ? editFormData.meetingLink.trim() : '',
+        StartTimestamp: editFormData.startTimestamp.valueOf(),
+        EndTimestamp: editFormData.endTimestamp.valueOf(),
+        Is_accepting_participants: editFormData.isAcceptingParticipants,
+        UpdatedTimestamp: Date.now()
+      };
+
+      await apiService.updateEventDetails(requestData);
+
+      // Close edit mode and modal
+      setIsEditMode(false);
+      handleCloseDetailsModal();
+
+      // Reload events data
+      if (currentUser) {
+        const userId = currentUser.userId || currentUser._id || currentUser.Id;
+        const [hostedUpcomingEvents, pastEvents] = await Promise.all([
+          apiService.getHostedUpcomingEvents(userId),
+          apiService.getHostedPastEvents(userId)
+        ]);
+
+        const upcomingArray = Array.isArray(hostedUpcomingEvents) ? hostedUpcomingEvents : [hostedUpcomingEvents];
+        const pastArray = Array.isArray(pastEvents) ? pastEvents : [pastEvents];
+        
+        const now = new Date();
+        const overdueEvents = [];
+        const actualUpcomingEvents = [];
+        
+        upcomingArray.forEach(event => {
+          const endTime = event.EndTimestamp || event.endTimestamp || event.endTime || event.end_time;
+          const active = event.Active !== undefined ? event.Active : event.active;
+          
+          if (active === 1 && endTime && new Date(endTime) < now) {
+            overdueEvents.push(event);
+          } else {
+            actualUpcomingEvents.push(event);
+          }
+        });
+        
+        setOverdueEventsData(sortEventsByStartTime(overdueEvents));
+        setUpcomingEventsData(sortEventsByStartTime(actualUpcomingEvents));
+        setCompletedEventsData(sortEventsByStartTime(pastArray));
+      }
+    } catch (err) {
+      console.error('Failed to update event:', err);
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   // Handle mark as complete
@@ -211,7 +410,7 @@ const MyEvents = () => {
   };
 
   // Render event card
-  const renderEventCard = (event) => {
+  const renderEventCard = (event, isFromUpcoming = false) => {
     if (!event) return null;
     
     const eventId = event.EventId || event.eventId || event.id || event._id;
@@ -254,7 +453,7 @@ const MyEvents = () => {
           </div>
           
           <div className="event-actions">
-            <button className="view-details-button" onClick={() => handleViewDetails(event)}>
+            <button className="view-details-button" onClick={() => handleViewDetails(event, isFromUpcoming)}>
               View Details
             </button>
           </div>
@@ -319,7 +518,7 @@ const MyEvents = () => {
             <h2 className="section-title">Upcoming</h2>
           </div>
           <div className="events-grid">
-            {upcomingEventsData.map(event => renderEventCard(event))}
+            {upcomingEventsData.map(event => renderEventCard(event, true))}
           </div>
         </div>
       )}
@@ -361,6 +560,148 @@ const MyEvents = () => {
             <div className="details-modal-body">
               {/* Left Panel - Main Details */}
               <div className="details-main-panel">
+                {isEditMode ? (
+                  // Edit Mode
+                  <>
+                    <div className="details-section">
+                      <h3 className="details-section-title">Edit Event Details</h3>
+                      <div className="details-section-content">
+                        <div className="edit-form">
+                          <div className="edit-form-group">
+                            <label className="edit-form-label">Title *</label>
+                            <input
+                              type="text"
+                              className={`edit-form-input ${editFormErrors.title ? 'error' : ''}`}
+                              value={editFormData.title}
+                              onChange={(e) => handleEditFieldChange('title', e.target.value)}
+                              placeholder="Event title"
+                              maxLength={100}
+                              required
+                            />
+                            {editFormErrors.title ? (
+                              <span className="edit-form-error">{editFormErrors.title}</span>
+                            ) : (
+                              <span className="edit-form-helper">{editFormData.title.length}/100 characters</span>
+                            )}
+                          </div>
+
+                          <div className="edit-form-group">
+                            <label className="edit-form-label">Description *</label>
+                            <textarea
+                              className={`edit-form-textarea ${editFormErrors.description ? 'error' : ''}`}
+                              value={editFormData.description}
+                              onChange={(e) => handleEditFieldChange('description', e.target.value)}
+                              placeholder="Event description"
+                              rows={6}
+                              maxLength={1000}
+                              required
+                            />
+                            {editFormErrors.description ? (
+                              <span className="edit-form-error">{editFormErrors.description}</span>
+                            ) : (
+                              <span className="edit-form-helper">{editFormData.description.length}/1000 characters</span>
+                            )}
+                          </div>
+
+                          <div className="edit-form-group">
+                            <label className="edit-form-label">Meeting Link</label>
+                            <input
+                              type="text"
+                              className={`edit-form-input ${editFormErrors.meetingLink ? 'error' : ''}`}
+                              value={editFormData.meetingLink}
+                              onChange={(e) => handleEditFieldChange('meetingLink', e.target.value)}
+                              placeholder="https://..."
+                            />
+                            {editFormErrors.meetingLink && (
+                              <span className="edit-form-error">{editFormErrors.meetingLink}</span>
+                            )}
+                          </div>
+
+                          <LocalizationProvider dateAdapter={AdapterDayjs}>
+                            <div className="edit-form-row">
+                              <div className="edit-form-group">
+                                <label className="edit-form-label">Start Date & Time *</label>
+                                <DateTimePicker
+                                  value={editFormData.startTimestamp}
+                                  onChange={(newValue) => handleEditFieldChange('startTimestamp', newValue)}
+                                  format="DD/MM/YYYY hh:mm A"
+                                  ampm={true}
+                                  slotProps={{
+                                    textField: {
+                                      fullWidth: true,
+                                      variant: "outlined",
+                                      className: `edit-form-datepicker ${editFormErrors.startTimestamp ? 'error' : ''}`,
+                                      required: true,
+                                      error: !!editFormErrors.startTimestamp
+                                    },
+                                    popper: {
+                                      placement: 'bottom-start',
+                                      sx: {
+                                        zIndex: 2100
+                                      }
+                                    },
+                                    actionBar: {
+                                      actions: ['clear', 'cancel', 'accept']
+                                    }
+                                  }}
+                                />
+                                {editFormErrors.startTimestamp && (
+                                  <span className="edit-form-error">{editFormErrors.startTimestamp}</span>
+                                )}
+                              </div>
+
+                              <div className="edit-form-group">
+                                <label className="edit-form-label">End Date & Time *</label>
+                                <DateTimePicker
+                                  value={editFormData.endTimestamp}
+                                  onChange={(newValue) => handleEditFieldChange('endTimestamp', newValue)}
+                                  minDateTime={editFormData.startTimestamp}
+                                  format="DD/MM/YYYY hh:mm A"
+                                  ampm={true}
+                                  slotProps={{
+                                    textField: {
+                                      fullWidth: true,
+                                      variant: "outlined",
+                                      className: `edit-form-datepicker ${editFormErrors.endTimestamp ? 'error' : ''}`,
+                                      required: true,
+                                      error: !!editFormErrors.endTimestamp
+                                    },
+                                    popper: {
+                                      placement: 'bottom-start',
+                                      sx: {
+                                        zIndex: 2100
+                                      }
+                                    },
+                                    actionBar: {
+                                      actions: ['clear', 'cancel', 'accept']
+                                    }
+                                  }}
+                                />
+                                {editFormErrors.endTimestamp && (
+                                  <span className="edit-form-error">{editFormErrors.endTimestamp}</span>
+                                )}
+                              </div>
+                            </div>
+                          </LocalizationProvider>
+
+                          <div className="edit-form-group">
+                            <label className="edit-form-checkbox-label">
+                              <input
+                                type="checkbox"
+                                className="edit-form-checkbox"
+                                checked={editFormData.isAcceptingParticipants}
+                                onChange={(e) => handleEditFieldChange('isAcceptingParticipants', e.target.checked)}
+                              />
+                              <span>Accepting Participants</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  // View Mode
+                  <>
                 <div className="details-section">
                   <div className="details-section-content">
                     <div className="details-title-container">
@@ -408,27 +749,32 @@ const MyEvents = () => {
                   </div>
                 </div>
 
-                {/* Meeting Link - Always show for host */}
+                {/* Meeting Link - Always show for host, display NA if link is empty */}
                 {(() => {
                   const meetingLink = detailsModalEvent.MeetingLink || detailsModalEvent.meetingLink || detailsModalEvent.meeting_link;
-                  return meetingLink && meetingLink.trim() !== '' && (
+                  const hasValidLink = meetingLink && meetingLink.trim() !== '';
+                  return (
                     <div className="details-section">
                       <h3 className="details-section-title">Meeting Link</h3>
                       <div className="details-section-content">
-                        <a 
-                          href={meetingLink} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="meeting-link"
-                          style={{
-                            color: '#0078d4',
-                            textDecoration: 'none',
-                            wordBreak: 'break-all',
-                            fontSize: '14px'
-                          }}
-                        >
-                          {meetingLink}
-                        </a>
+                        {hasValidLink ? (
+                          <a 
+                            href={meetingLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="meeting-link"
+                            style={{
+                              color: '#0078d4',
+                              textDecoration: 'none',
+                              wordBreak: 'break-all',
+                              fontSize: '14px'
+                            }}
+                          >
+                            {meetingLink}
+                          </a>
+                        ) : (
+                          <span style={{ color: '#666', fontSize: '14px' }}>NA</span>
+                        )}
                       </div>
                     </div>
                   );
@@ -476,9 +822,12 @@ const MyEvents = () => {
                     </div>
                   );
                 })()}
+                  </>
+                )}
               </div>
 
-              {/* Right Panel - Sidebar */}
+              {/* Right Panel - Sidebar - Only show in view mode */}
+              {!isEditMode && (
               <div className="details-sidebar-panel">
                 <div className="details-sidebar-section">
                   <h3 className="details-sidebar-title">Schedule</h3>
@@ -588,22 +937,54 @@ const MyEvents = () => {
                   </div>
                 </div>
               </div>
+              )}
             </div>
 
             {/* Modal Footer */}
             <div className="details-modal-footer">
-              {isDetailsEventOverdue && (
-                <button 
-                  className="details-modal-mark-complete" 
-                  onClick={handleMarkAsComplete}
-                  disabled={isMarkingComplete}
-                >
-                  {isMarkingComplete ? 'Marking...' : 'Mark as Complete'}
-                </button>
+              {isEditMode ? (
+                // Edit mode buttons
+                <>
+                  <button 
+                    className="details-modal-cancel" 
+                    onClick={handleCancelEdit}
+                    disabled={isSavingEdit}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className="details-modal-save" 
+                    onClick={handleSaveEdit}
+                    disabled={isSavingEdit}
+                  >
+                    {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </>
+              ) : (
+                // View mode buttons
+                <>
+                  {isDetailsEventUpcoming && (
+                    <button 
+                      className="details-modal-edit" 
+                      onClick={handleEnterEditMode}
+                    >
+                      Edit Event
+                    </button>
+                  )}
+                  {isDetailsEventOverdue && (
+                    <button 
+                      className="details-modal-mark-complete" 
+                      onClick={handleMarkAsComplete}
+                      disabled={isMarkingComplete}
+                    >
+                      {isMarkingComplete ? 'Marking...' : 'Mark as Complete'}
+                    </button>
+                  )}
+                  <button className="details-modal-cancel" onClick={handleCloseDetailsModal}>
+                    Close
+                  </button>
+                </>
               )}
-              <button className="details-modal-cancel" onClick={handleCloseDetailsModal}>
-                Close
-              </button>
             </div>
           </div>
         </div>
