@@ -1,17 +1,11 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Paper,
   Typography,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   FormControlLabel,
   Switch,
   Button,
-  Grid,
   Alert,
   Divider
 } from '@mui/material';
@@ -30,7 +24,7 @@ const NewEvent = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    sendLinkNotificationAt: '',
+    meetingLink: '',
     startDateTime: dayjs().add(1, 'hour'),
     endDateTime: dayjs().add(2, 'hour'),
     isPrivate: false,
@@ -73,18 +67,18 @@ const NewEvent = () => {
 
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
-    } else if (formData.title.length > 100) {
-      newErrors.title = 'Title must be 100 characters or less';
+    } else if (formData.title.length > 140) {
+      newErrors.title = 'Title must be 140 characters or less';
     }
 
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
-    } else if (formData.description.length > 500) {
-      newErrors.description = 'Description must be 500 characters or less';
+    } else if (formData.description.length > 1000) {
+      newErrors.description = 'Description must be 1000 characters or less';
     }
 
-    if (!formData.sendLinkNotificationAt) {
-      newErrors.sendLinkNotificationAt = 'Please select when to send link notification';
+    if (formData.meetingLink.trim() && !/^https?:\/\/.+/.test(formData.meetingLink.trim())) {
+      newErrors.meetingLink = 'Please enter a valid URL (must start with http:// or https://)';
     }
 
     if (!formData.startDateTime) {
@@ -124,8 +118,8 @@ const NewEvent = () => {
       const eventData = {
         Title: formData.title,
         Description: formData.description,
+        MeetingLink: formData.meetingLink.trim() || '', // Always include MeetingLink (empty string if not provided)
         OrganizerId: user.userId || user.id, // UserId of Host
-        SendLinkNotificationAt: getSendLinkNotificationValue(formData.sendLinkNotificationAt),
         EnableRating: formData.enableRatings,
         EnableComments: formData.enableComments,
         StartTimestamp: formData.startDateTime.valueOf(), // Convert to milliseconds timestamp
@@ -177,7 +171,7 @@ const NewEvent = () => {
       setFormData({
         title: '',
         description: '',
-        sendLinkNotificationAt: '',
+        meetingLink: '',
         startDateTime: dayjs().add(1, 'hour'),
         endDateTime: dayjs().add(2, 'hour'),
         isPrivate: false,
@@ -190,20 +184,6 @@ const NewEvent = () => {
       setSubmitMessage(`Failed to create event: ${error.message}`);
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  // Helper function to map dropdown selection to numeric value
-  const getSendLinkNotificationValue = (selection) => {
-    switch (selection) {
-      case 'participant-applies':
-        return 1;
-      case 'accepting-registrations-button':
-        return 2;
-      case 'manual-button':
-        return 3;
-      default:
-        return 1; // Default to participant applies
     }
   };
 
@@ -271,8 +251,8 @@ const NewEvent = () => {
                  value={formData.description}
                  onChange={handleInputChange('description')}
                  error={!!errors.description}
-                 helperText={errors.description || `${formData.description.length}/500 characters`}
-                 inputProps={{ maxLength: 500 }}
+                 helperText={errors.description || `${formData.description.length}/1000 characters`}
+                 inputProps={{ maxLength: 1000 }}
                  variant="outlined"
                  multiline
                  rows={4}
@@ -296,13 +276,22 @@ const NewEvent = () => {
                  }}
                />
 
-               {/* Send Link Notification Dropdown */}
-               <FormControl 
-                 fullWidth 
-                 error={!!errors.sendLinkNotificationAt} 
-                 required
+               {/* Meeting Link Field */}
+               <TextField
+                 fullWidth
+                 label="Meeting Link (Optional)"
+                 value={formData.meetingLink}
+                 onChange={handleInputChange('meetingLink')}
+                 error={!!errors.meetingLink}
+                 helperText={
+                   errors.meetingLink || 
+                   (formData.isPrivate 
+                     ? 'Participants can view this link only after their request is approved'
+                     : 'Participants can view this link after registering for the event')
+                 }
                  variant="outlined"
                  margin="normal"
+                 placeholder="https://example.com/meeting"
                  sx={{ 
                    mb: 2,
                    '& .MuiOutlinedInput-root': {
@@ -315,26 +304,12 @@ const NewEvent = () => {
                    },
                    '& .MuiInputLabel-root.MuiInputLabel-shrink': {
                      top: '0px'
+                   },
+                   '& .MuiFormHelperText-root': {
+                     fontFamily: 'Inter, sans-serif'
                    }
                  }}
-               >
-                 <InputLabel>Send Link Notification At</InputLabel>
-                 <Select
-                   value={formData.sendLinkNotificationAt}
-                   onChange={handleInputChange('sendLinkNotificationAt')}
-                   label="Send Link Notification At"
-                   MenuProps={{ PaperProps: { sx: { fontFamily: 'Inter, sans-serif' } } }}
-                 >
-                   <MenuItem value="participant-applies">Participant Applies for the Event</MenuItem>
-                   <MenuItem value="accepting-registrations-button">Accepting-Registrations Button is turned off</MenuItem>
-                   <MenuItem value="manual-button">Manual push of a Send-All Button</MenuItem>
-                 </Select>
-                 {errors.sendLinkNotificationAt && (
-                   <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5, fontFamily: 'Inter, sans-serif' }}>
-                     {errors.sendLinkNotificationAt}
-                   </Typography>
-                 )}
-               </FormControl>
+               />
 
               {/* Start Date Time */}
               <DateTimePicker
@@ -440,7 +415,7 @@ const NewEvent = () => {
                        label="Private Event"
                      />
                      <Typography variant="caption" className="setting-description">
-                       Only invited users can see this event
+                       Only permitted users can attend this event
                      </Typography>
                    </div>
 

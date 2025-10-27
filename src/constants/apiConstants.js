@@ -4,7 +4,7 @@
 // 🌐 API Configuration
 export const API_CONFIG = {
   // Base URL for all API calls
-   BASE_URL: 'https://encanto-webapi.azurewebsites.net',
+  BASE_URL: 'https://encanto-webapi.azurewebsites.net',
   //BASE_URL: 'https://localhost:7207',
   
   // Default headers for API requests
@@ -41,6 +41,14 @@ export const EVENT_ENDPOINTS = {
   BROWSE_UPCOMING: '/events/browse-upcoming',
   EVENT_BY_ID: '/events',
   NEW_EVENT: '/events/new',
+  APPLY: '/events/apply',
+  GET_REGISTERED: '/events/get-registered',
+  GET_PAST_ATTENDED: '/events/get-past-attended',
+  HOSTED_UPCOMING: '/events/hosted-upcoming',
+  HOSTED_PAST: '/events/hosted-past',
+  UPDATE_EVENT_STATUS: '/events/update-event-status',
+  GET_PENDING_REQUESTS: '/events/pending-requests',
+  UPDATE_PENDING_REQUEST: '/events/update-pending-request',
 };
 
 // 🔔 Application Utility Endpoints

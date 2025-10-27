@@ -548,9 +548,429 @@ export const events = {
     return await makeApiCall(USER_ENDPOINTS.USER_EVENTS);
   },
 
+  // Get registered events for guest
+  async getRegisteredEvents(guestId) {
+    try {
+      const url = `${API_CONFIG.BASE_URL}${EVENT_ENDPOINTS.GET_REGISTERED}?guestId=${encodeURIComponent(guestId)}`;
+      
+      const options = {
+        method: HTTP_METHODS.GET,
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        }
+      };
+
+      // Add session key if user is authenticated
+      const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
+      if (sessionKey) {
+        options.headers['session-key'] = sessionKey;
+      }
+
+      console.log('Making API call to:', url, 'with options:', options);
+
+      const response = await fetch(url, options);
+
+      if (!response.ok) {
+        if (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN) {
+          localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME);
+        }
+        let serverMessage = '';
+        try {
+          serverMessage = await response.text();
+        } catch (_) {
+          // ignore
+        }
+        const statusLine = `${response.status} - ${response.statusText || 'Error'}`;
+        const message = serverMessage && serverMessage.trim().length > 0 ? serverMessage : statusLine;
+        const err = new Error(`${ERROR_MESSAGES.API_ERROR}: ${message}`);
+        try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message } })); } catch (_) {}
+        throw err;
+      }
+
+      const responseText = await response.text();
+      if (responseText.trim() === '') {
+        return { success: true, message: SUCCESS_MESSAGES.OPERATION_COMPLETED };
+      }
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        return { success: true, message: responseText };
+      }
+    } catch (error) {
+      console.error('getRegisteredEvents() API call failed:', error);
+      try {
+        window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: error.message } }));
+      } catch (_) {}
+      throw error;
+    }
+  },
+
+  // Get past attended events for guest
+  async getPastAttendedEvents(guestId) {
+    try {
+      const url = `${API_CONFIG.BASE_URL}${EVENT_ENDPOINTS.GET_PAST_ATTENDED}?guestId=${encodeURIComponent(guestId)}`;
+      
+      const options = {
+        method: HTTP_METHODS.GET,
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        }
+      };
+
+      // Add session key if user is authenticated
+      const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
+      if (sessionKey) {
+        options.headers['session-key'] = sessionKey;
+      }
+
+      console.log('Making API call to:', url, 'with options:', options);
+
+      const response = await fetch(url, options);
+
+      if (!response.ok) {
+        if (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN) {
+          localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME);
+        }
+        let serverMessage = '';
+        try {
+          serverMessage = await response.text();
+        } catch (_) {
+          // ignore
+        }
+        const statusLine = `${response.status} - ${response.statusText || 'Error'}`;
+        const message = serverMessage && serverMessage.trim().length > 0 ? serverMessage : statusLine;
+        const err = new Error(`${ERROR_MESSAGES.API_ERROR}: ${message}`);
+        try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message } })); } catch (_) {}
+        throw err;
+      }
+
+      const responseText = await response.text();
+      if (responseText.trim() === '') {
+        return { success: true, message: SUCCESS_MESSAGES.OPERATION_COMPLETED };
+      }
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        return { success: true, message: responseText };
+      }
+    } catch (error) {
+      console.error('getPastAttendedEvents() API call failed:', error);
+      try {
+        window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: error.message } }));
+      } catch (_) {}
+      throw error;
+    }
+  },
+
+  // Get hosted upcoming events for host
+  async getHostedUpcomingEvents(hostId) {
+    try {
+      const url = `${API_CONFIG.BASE_URL}${EVENT_ENDPOINTS.HOSTED_UPCOMING}?hostId=${encodeURIComponent(hostId)}`;
+      
+      const options = {
+        method: HTTP_METHODS.GET,
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        }
+      };
+
+      // Add session key if user is authenticated
+      const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
+      if (sessionKey) {
+        options.headers['session-key'] = sessionKey;
+      }
+
+      console.log('Making API call to:', url, 'with options:', options);
+
+      const response = await fetch(url, options);
+
+      if (!response.ok) {
+        if (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN) {
+          localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME);
+        }
+        let serverMessage = '';
+        try {
+          serverMessage = await response.text();
+        } catch (_) {
+          // ignore
+        }
+        const statusLine = `${response.status} - ${response.statusText || 'Error'}`;
+        const message = serverMessage && serverMessage.trim().length > 0 ? serverMessage : statusLine;
+        const err = new Error(`${ERROR_MESSAGES.API_ERROR}: ${message}`);
+        try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message } })); } catch (_) {}
+        throw err;
+      }
+
+      const responseText = await response.text();
+      if (responseText.trim() === '') {
+        return { success: true, message: SUCCESS_MESSAGES.OPERATION_COMPLETED };
+      }
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        return { success: true, message: responseText };
+      }
+    } catch (error) {
+      console.error('getHostedUpcomingEvents() API call failed:', error);
+      try {
+        window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: error.message } }));
+      } catch (_) {}
+      throw error;
+    }
+  },
+
+  // Get hosted past events for host
+  async getHostedPastEvents(hostId) {
+    try {
+      const url = `${API_CONFIG.BASE_URL}${EVENT_ENDPOINTS.HOSTED_PAST}?hostId=${encodeURIComponent(hostId)}`;
+      
+      const options = {
+        method: HTTP_METHODS.GET,
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        }
+      };
+
+      // Add session key if user is authenticated
+      const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
+      if (sessionKey) {
+        options.headers['session-key'] = sessionKey;
+      }
+
+      console.log('Making API call to:', url, 'with options:', options);
+
+      const response = await fetch(url, options);
+
+      if (!response.ok) {
+        if (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN) {
+          localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME);
+        }
+        let serverMessage = '';
+        try {
+          serverMessage = await response.text();
+        } catch (_) {
+          // ignore
+        }
+        const statusLine = `${response.status} - ${response.statusText || 'Error'}`;
+        const message = serverMessage && serverMessage.trim().length > 0 ? serverMessage : statusLine;
+        const err = new Error(`${ERROR_MESSAGES.API_ERROR}: ${message}`);
+        try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message } })); } catch (_) {}
+        throw err;
+      }
+
+      const responseText = await response.text();
+      if (responseText.trim() === '') {
+        return { success: true, message: SUCCESS_MESSAGES.OPERATION_COMPLETED };
+      }
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        return { success: true, message: responseText };
+      }
+    } catch (error) {
+      console.error('getHostedPastEvents() API call failed:', error);
+      try {
+        window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: error.message } }));
+      } catch (_) {}
+      throw error;
+    }
+  },
+
   // Create a new event
   async create(eventData) {
     return await createNewEvent(EVENT_ENDPOINTS.NEW_EVENT, HTTP_METHODS.POST, eventData);
+  },
+
+  // Apply to an event (join/request)
+  async apply(eventId, userId) {
+    const requestData = {
+      userId: userId,
+      eventId: eventId,
+      updatedTimestamp: Date.now()
+    };
+    const res = await makeApiCall(EVENT_ENDPOINTS.APPLY, HTTP_METHODS.PUT, requestData);
+    try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'success', message: 'Successfully applied to event' } })); } catch (_) {}
+    return res;
+  },
+
+  // Update event status (mark as complete)
+  async updateEventStatus(eventId, eventStatus) {
+    try {
+      const url = `${API_CONFIG.BASE_URL}${EVENT_ENDPOINTS.UPDATE_EVENT_STATUS}?eventId=${encodeURIComponent(eventId)}&eventStatus=${eventStatus}`;
+      
+      const options = {
+        method: HTTP_METHODS.PUT,
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        }
+      };
+
+      // Add session key if user is authenticated
+      const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
+      if (sessionKey) {
+        options.headers['session-key'] = sessionKey;
+      }
+
+      console.log('Making API call to:', url, 'with options:', options);
+
+      const response = await fetch(url, options);
+
+      if (!response.ok) {
+        if (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN) {
+          localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME);
+        }
+        let serverMessage = '';
+        try {
+          serverMessage = await response.text();
+        } catch (_) {
+          // ignore
+        }
+        const statusLine = `${response.status} - ${response.statusText || 'Error'}`;
+        const message = serverMessage && serverMessage.trim().length > 0 ? serverMessage : statusLine;
+        const err = new Error(`${ERROR_MESSAGES.API_ERROR}: ${message}`);
+        try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message } })); } catch (_) {}
+        throw err;
+      }
+
+      const responseText = await response.text();
+      try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'success', message: 'Event marked as complete successfully' } })); } catch (_) {}
+      
+      if (responseText.trim() === '') {
+        return { success: true, message: SUCCESS_MESSAGES.OPERATION_COMPLETED };
+      }
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        return { success: true, message: responseText };
+      }
+    } catch (error) {
+      console.error('updateEventStatus() API call failed:', error);
+      try {
+        window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: error.message } }));
+      } catch (_) {}
+      throw error;
+    }
+  },
+
+  // Get all pending requests for a host
+  async getPendingRequests(hostId) {
+    try {
+      const url = `${API_CONFIG.BASE_URL}${EVENT_ENDPOINTS.GET_PENDING_REQUESTS}?hostId=${encodeURIComponent(hostId)}`;
+      
+      const options = {
+        method: HTTP_METHODS.GET,
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        }
+      };
+
+      // Add session key if user is authenticated
+      const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
+      if (sessionKey) {
+        options.headers['session-key'] = sessionKey;
+      }
+
+      console.log('Making API call to:', url, 'with options:', options);
+
+      const response = await fetch(url, options);
+
+      if (!response.ok) {
+        if (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN) {
+          localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME);
+        }
+        let serverMessage = '';
+        try {
+          serverMessage = await response.text();
+        } catch (_) {
+          // ignore
+        }
+        const statusLine = `${response.status} - ${response.statusText || 'Error'}`;
+        const message = serverMessage && serverMessage.trim().length > 0 ? serverMessage : statusLine;
+        const err = new Error(`${ERROR_MESSAGES.API_ERROR}: ${message}`);
+        try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message } })); } catch (_) {}
+        throw err;
+      }
+
+      const responseText = await response.text();
+      if (responseText.trim() === '') {
+        return { success: true, message: SUCCESS_MESSAGES.OPERATION_COMPLETED };
+      }
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        return { success: true, message: responseText };
+      }
+    } catch (error) {
+      console.error('getPendingRequests() API call failed:', error);
+      try {
+        window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: error.message } }));
+      } catch (_) {}
+      throw error;
+    }
+  },
+
+  // Update pending request (accept or reject)
+  async updatePendingRequest(eventId, participantId, isParticipantAccepted) {
+    try {
+      const url = `${API_CONFIG.BASE_URL}${EVENT_ENDPOINTS.UPDATE_PENDING_REQUEST}?eventId=${encodeURIComponent(eventId)}&participantId=${encodeURIComponent(participantId)}&isParticipantAccepted=${isParticipantAccepted}`;
+      
+      const options = {
+        method: HTTP_METHODS.PUT,
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        }
+      };
+
+      // Add session key if user is authenticated
+      const sessionKey = localStorage.getItem(API_CONFIG.SESSION_KEY_NAME);
+      if (sessionKey) {
+        options.headers['session-key'] = sessionKey;
+      }
+
+      console.log('Making API call to:', url, 'with options:', options);
+
+      const response = await fetch(url, options);
+
+      if (!response.ok) {
+        if (response.status === HTTP_STATUS.UNAUTHORIZED || response.status === HTTP_STATUS.FORBIDDEN) {
+          localStorage.removeItem(API_CONFIG.SESSION_KEY_NAME);
+        }
+        let serverMessage = '';
+        try {
+          serverMessage = await response.text();
+        } catch (_) {
+          // ignore
+        }
+        const statusLine = `${response.status} - ${response.statusText || 'Error'}`;
+        const message = serverMessage && serverMessage.trim().length > 0 ? serverMessage : statusLine;
+        const err = new Error(`${ERROR_MESSAGES.API_ERROR}: ${message}`);
+        try { window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message } })); } catch (_) {}
+        throw err;
+      }
+
+      const responseText = await response.text();
+      const actionText = isParticipantAccepted ? 'accepted' : 'rejected';
+      try { 
+        window.dispatchEvent(new CustomEvent('api:notify', { 
+          detail: { type: 'success', message: `Request ${actionText} successfully` } 
+        })); 
+      } catch (_) {}
+      
+      if (responseText.trim() === '') {
+        return { success: true, message: SUCCESS_MESSAGES.OPERATION_COMPLETED };
+      }
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        return { success: true, message: responseText };
+      }
+    } catch (error) {
+      console.error('updatePendingRequest() API call failed:', error);
+      try {
+        window.dispatchEvent(new CustomEvent('api:notify', { detail: { type: 'error', message: error.message } }));
+      } catch (_) {}
+      throw error;
+    }
   },
 
 };
@@ -583,7 +1003,15 @@ export const useApiService = () => {
     getBrowseUpcomingEvents: events.getBrowseUpcoming,
     getEvent: events.getById,
     getUserEvents: events.getUserEvents,
+    getRegisteredEvents: events.getRegisteredEvents,
+    getPastAttendedEvents: events.getPastAttendedEvents,
+    getHostedUpcomingEvents: events.getHostedUpcomingEvents,
+    getHostedPastEvents: events.getHostedPastEvents,
     createEvent: events.create,
+    applyToEvent: events.apply,
+    updateEventStatus: events.updateEventStatus,
+    getPendingRequests: events.getPendingRequests,
+    updatePendingRequest: events.updatePendingRequest,
 
     // Application utilities
     testDatabase: app.testDatabase,
