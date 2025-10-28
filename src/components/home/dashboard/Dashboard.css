@@ -5,6 +5,7 @@
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  border-radius: 12px;
 }
 
 /* Header Styling - Match Browse Events Page */

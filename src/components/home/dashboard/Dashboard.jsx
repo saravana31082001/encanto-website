@@ -116,9 +116,9 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Activity Summary */}
+      {/* Quick Actions */}
       <div className="activity-section">
-        <h2 className="section-title">Activity Summary</h2>
+        <h2 className="section-title">Quick Actions</h2>
         <div className="activity-list">
           <div className="activity-item clickable" onClick={() => handleNavigate('/registered')}>
             <div className="activity-content">
