@@ -116,7 +116,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Action */}
       <div className="activity-section">
         <h2 className="section-title">Quick Actions</h2>
         <div className="activity-list">
