@@ -33,7 +33,6 @@ const NewEvent = () => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
 
   const handleInputChange = (field) => (event) => {
     const value = event.target ? event.target.value : event;
@@ -58,21 +57,6 @@ const NewEvent = () => {
         ...prev,
         [field]: ''
       }));
-    }
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Check file type
-      if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-        alert('Please upload only JPG, JPEG, or PNG images');
-        return;
-      }
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onload = () => setImageFile(reader.result);
-      reader.readAsDataURL(file);
     }
   };
 
@@ -140,8 +124,7 @@ const NewEvent = () => {
         StartTimestamp: formData.startDateTime.valueOf(), // Convert to milliseconds timestamp
         EndTimestamp: formData.endDateTime.valueOf(), // Convert to milliseconds timestamp
         CreatedTimestamp: Date.now(), // Current timestamp in milliseconds
-        IsPrivate: formData.isPrivate,
-        EventImageBitCode: imageFile || null
+        IsPrivate: formData.isPrivate
       };
 
       // Call the API to create the event
@@ -165,7 +148,6 @@ const NewEvent = () => {
         enableRatings: true,
         enableComments: true
       });
-      setImageFile(null);
       
     } catch (error) {
       console.error('Error creating event:', error);
@@ -293,15 +275,6 @@ const NewEvent = () => {
                    }
                  }}
                />
-
-               {/* Image Upload */}
-               <Box sx={{ mb: 2 }}>
-                 <Typography variant="body2" sx={{ mb: 1, color: '#374151' }}>
-                   Event Image (Optional - JPG, JPEG, PNG only)
-                 </Typography>
-                 <input type="file" accept=".jpg,.jpeg,.png" onChange={handleImageChange} />
-                 {imageFile && <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'green' }}>✓ Image selected</Typography>}
-               </Box>
 
               {/* Start Date Time */}
               <DateTimePicker
