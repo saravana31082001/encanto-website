@@ -28,11 +28,14 @@ const NewEvent = () => {
     endDateTime: dayjs().add(2, 'hour'),
     isPrivate: false,
     enableRatings: true,
-    enableComments: true
+    enableComments: true,
+    eventImageBitCode: null
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFileName, setImageFileName] = useState('');
 
   const handleInputChange = (field) => (event) => {
     const value = event.target ? event.target.value : event;
@@ -57,6 +60,67 @@ const NewEvent = () => {
         ...prev,
         [field]: ''
       }));
+    }
+  };
+
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    
+    if (!file) {
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      setErrors(prev => ({
+        ...prev,
+        eventImage: 'Please upload a valid image file (JPG, JPEG, or PNG)'
+      }));
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      setErrors(prev => ({
+        ...prev,
+        eventImage: 'Image size must be less than 5MB'
+      }));
+      return;
+    }
+
+    // Clear any previous errors
+    setErrors(prev => ({
+      ...prev,
+      eventImage: ''
+    }));
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setFormData(prev => ({
+        ...prev,
+        eventImageBitCode: base64String
+      }));
+      setImagePreview(base64String);
+      setImageFileName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setFormData(prev => ({
+      ...prev,
+      eventImageBitCode: null
+    }));
+    setImagePreview(null);
+    setImageFileName('');
+    // Clear the file input
+    const fileInput = document.getElementById('event-image-upload');
+    if (fileInput) {
+      fileInput.value = '';
     }
   };
 
@@ -124,7 +188,8 @@ const NewEvent = () => {
         StartTimestamp: formData.startDateTime.valueOf(), // Convert to milliseconds timestamp
         EndTimestamp: formData.endDateTime.valueOf(), // Convert to milliseconds timestamp
         CreatedTimestamp: Date.now(), // Current timestamp in milliseconds
-        IsPrivate: formData.isPrivate
+        IsPrivate: formData.isPrivate,
+        EventImageBitCode: formData.eventImageBitCode || null
       };
 
       // Call the API to create the event
@@ -146,8 +211,16 @@ const NewEvent = () => {
         endDateTime: dayjs().add(2, 'hour'),
         isPrivate: false,
         enableRatings: true,
-        enableComments: true
+        enableComments: true,
+        eventImageBitCode: null
       });
+      setImagePreview(null);
+      setImageFileName('');
+      // Clear the file input
+      const fileInput = document.getElementById('event-image-upload');
+      if (fileInput) {
+        fileInput.value = '';
+      }
       
     } catch (error) {
       console.error('Error creating event:', error);
@@ -275,6 +348,62 @@ const NewEvent = () => {
                    }
                  }}
                />
+
+               {/* Event Image Upload */}
+               <Box sx={{ mb: 2, mt: 1 }}>
+                 <Typography variant="subtitle2" sx={{ mb: 1, fontFamily: 'Inter, sans-serif', color: '#374151', fontWeight: 500 }}>
+                   Event Image (Optional)
+                 </Typography>
+                 <Box className="image-upload-container">
+                   {!imagePreview ? (
+                     <label htmlFor="event-image-upload" className="image-upload-label">
+                       <input
+                         id="event-image-upload"
+                         type="file"
+                         accept="image/jpeg,image/jpg,image/png"
+                         onChange={handleImageUpload}
+                         style={{ display: 'none' }}
+                       />
+                       <Box className="image-upload-box">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                           <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                           <polyline points="21 15 16 10 5 21"></polyline>
+                         </svg>
+                         <Typography variant="body2" sx={{ mt: 1, fontFamily: 'Inter, sans-serif' }}>
+                           Click to upload image
+                         </Typography>
+                         <Typography variant="caption" sx={{ color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
+                           JPG, JPEG, or PNG (Max 5MB)
+                         </Typography>
+                       </Box>
+                     </label>
+                   ) : (
+                     <Box className="image-preview-container">
+                       <img src={imagePreview} alt="Event preview" className="image-preview" />
+                       <Box className="image-preview-overlay">
+                         <Typography variant="body2" sx={{ color: 'white', fontFamily: 'Inter, sans-serif', mb: 1, wordBreak: 'break-word' }}>
+                           {imageFileName}
+                         </Typography>
+                         <Button
+                           variant="contained"
+                           color="error"
+                           size="small"
+                           onClick={handleRemoveImage}
+                           sx={{ fontFamily: 'Inter, sans-serif' }}
+                         >
+                           Remove Image
+                         </Button>
+                       </Box>
+                     </Box>
+                   )}
+                 </Box>
+                 {errors.eventImage && (
+                   <Typography variant="caption" sx={{ color: '#d32f2f', fontFamily: 'Inter, sans-serif', mt: 0.5, display: 'block' }}>
+                     {errors.eventImage}
+                   </Typography>
+                 )}
+               </Box>
 
               {/* Start Date Time */}
               <DateTimePicker

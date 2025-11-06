@@ -161,6 +161,69 @@
   padding-left: 4.25rem;
 }
 
+/* Image Upload Styles */
+.image-upload-container {
+  width: 100%;
+}
+
+.image-upload-label {
+  cursor: pointer;
+  display: block;
+}
+
+.image-upload-box {
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  background-color: #f9fafb;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+}
+
+.image-upload-box:hover {
+  border-color: #1D68F5;
+  background-color: #f3f4f6;
+}
+
+.image-upload-box svg {
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.image-preview-container {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 100%;
+  border: 1px solid #e5e7eb;
+}
+
+.image-preview {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  display: block;
+}
+
+.image-preview-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 /* Submit Button - Match login/signup styling */
 .submit-btn {
   background-color: #1D68F5 !important;
