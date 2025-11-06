@@ -22,6 +22,8 @@ const BrowseEvents = () => {
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [detailsModalEvent, setDetailsModalEvent] = useState(null);
   const [applyingEventId, setApplyingEventId] = useState(null);
+  const [showImage, setShowImage] = useState(false);
+  const [currentImage, setCurrentImage] = useState(null);
 
   const apiService = useApiService();
   const { user: currentUser } = useApp();
@@ -663,6 +665,24 @@ const BrowseEvents = () => {
                   </div>
                 </div>
 
+                {/* Show Image if exists */}
+                {(detailsModalEvent.EventImageBitCode || detailsModalEvent.eventImageBitCode) && (
+                  <div className="details-section">
+                    <h3 className="details-section-title">Event Image</h3>
+                    <div className="details-section-content">
+                      <img 
+                        src={detailsModalEvent.EventImageBitCode || detailsModalEvent.eventImageBitCode}
+                        alt="Event" 
+                        style={{ maxWidth: '100%', cursor: 'pointer', borderRadius: '8px' }}
+                        onClick={() => {
+                          setCurrentImage(detailsModalEvent.EventImageBitCode || detailsModalEvent.eventImageBitCode);
+                          setShowImage(true);
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="details-section">
                   <h3 className="details-section-title">Description</h3>
                   <div className="details-section-content">
@@ -976,6 +996,44 @@ const BrowseEvents = () => {
               })()}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Simple Image Popup */}
+      {showImage && currentImage && (
+        <div 
+          style={{
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            backgroundColor: 'rgba(0,0,0,0.9)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            zIndex: 9999
+          }}
+          onClick={() => setShowImage(false)}
+        >
+          <img src={currentImage} alt="Event" style={{ maxWidth: '90%', maxHeight: '90%' }} />
+          <button 
+            onClick={() => setShowImage(false)}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              background: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              fontSize: '24px',
+              cursor: 'pointer'
+            }}
+          >
+            ×
+          </button>
         </div>
       )}
 
