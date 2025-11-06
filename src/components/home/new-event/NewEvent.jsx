@@ -97,12 +97,27 @@ const NewEvent = () => {
     }));
 
     // Convert to base64
+    //  - COMMENTED OUT - START
+    // const reader = new FileReader();
+    // reader.onloadend = () => {
+    //   const base64String = reader.result;
+    //   setFormData(prev => ({
+    //     ...prev,
+    //     eventImageBitCode: base64String
+    //   }));
+    //   setImagePreview(base64String);
+    //   setImageFileName(file.name);
+    // };
+    // reader.readAsDataURL(file);
+    //  - COMMENTED OUT - END
+
+    // Set EventImageBitCode to "test" when image is uploaded
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = reader.result;
       setFormData(prev => ({
         ...prev,
-        eventImageBitCode: base64String
+        eventImageBitCode: "test"
       }));
       setImagePreview(base64String);
       setImageFileName(file.name);
